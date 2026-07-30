@@ -14,7 +14,212 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      alert_log: {
+        Row: {
+          check_key: string
+          created_at: string
+          detail: Json | null
+          id: string
+          mailed: boolean
+          target_id: string
+          transition: string
+        }
+        Insert: {
+          check_key: string
+          created_at?: string
+          detail?: Json | null
+          id?: string
+          mailed?: boolean
+          target_id: string
+          transition: string
+        }
+        Update: {
+          check_key?: string
+          created_at?: string
+          detail?: Json | null
+          id?: string
+          mailed?: boolean
+          target_id?: string
+          transition?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "alert_log_target_id_fkey"
+            columns: ["target_id"]
+            isOneToOne: false
+            referencedRelation: "watch_targets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      daily_summaries: {
+        Row: {
+          avg_latency_ms: number | null
+          day: string
+          fail_count: number
+          id: string
+          target_id: string
+          uptime_pct: number | null
+        }
+        Insert: {
+          avg_latency_ms?: number | null
+          day: string
+          fail_count?: number
+          id?: string
+          target_id: string
+          uptime_pct?: number | null
+        }
+        Update: {
+          avg_latency_ms?: number | null
+          day?: string
+          fail_count?: number
+          id?: string
+          target_id?: string
+          uptime_pct?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "daily_summaries_target_id_fkey"
+            columns: ["target_id"]
+            isOneToOne: false
+            referencedRelation: "watch_targets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      proposals: {
+        Row: {
+          category: string
+          created_at: string
+          decided_at: string | null
+          description: string
+          id: string
+          proposed_action: string
+          source: string
+          status: string
+          target_id: string | null
+          title: string
+        }
+        Insert: {
+          category: string
+          created_at?: string
+          decided_at?: string | null
+          description: string
+          id?: string
+          proposed_action: string
+          source?: string
+          status?: string
+          target_id?: string | null
+          title: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          decided_at?: string | null
+          description?: string
+          id?: string
+          proposed_action?: string
+          source?: string
+          status?: string
+          target_id?: string | null
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "proposals_target_id_fkey"
+            columns: ["target_id"]
+            isOneToOne: false
+            referencedRelation: "watch_targets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      scan_results: {
+        Row: {
+          check_key: string
+          detail: Json | null
+          id: string
+          latency_ms: number | null
+          measured_at: string
+          status: string
+          target_id: string
+        }
+        Insert: {
+          check_key: string
+          detail?: Json | null
+          id?: string
+          latency_ms?: number | null
+          measured_at?: string
+          status: string
+          target_id: string
+        }
+        Update: {
+          check_key?: string
+          detail?: Json | null
+          id?: string
+          latency_ms?: number | null
+          measured_at?: string
+          status?: string
+          target_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scan_results_target_id_fkey"
+            columns: ["target_id"]
+            isOneToOne: false
+            referencedRelation: "watch_targets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      watch_targets: {
+        Row: {
+          checks: Json
+          created_at: string
+          enabled: boolean
+          form_smoke_url: string | null
+          frequency: string
+          id: string
+          kind: string
+          last_scanned_at: string | null
+          lovable_project_id: string | null
+          name: string
+          notes: string | null
+          status: string
+          url: string
+        }
+        Insert: {
+          checks?: Json
+          created_at?: string
+          enabled?: boolean
+          form_smoke_url?: string | null
+          frequency?: string
+          id?: string
+          kind: string
+          last_scanned_at?: string | null
+          lovable_project_id?: string | null
+          name: string
+          notes?: string | null
+          status?: string
+          url: string
+        }
+        Update: {
+          checks?: Json
+          created_at?: string
+          enabled?: boolean
+          form_smoke_url?: string | null
+          frequency?: string
+          id?: string
+          kind?: string
+          last_scanned_at?: string | null
+          lovable_project_id?: string | null
+          name?: string
+          notes?: string | null
+          status?: string
+          url?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
