@@ -80,19 +80,23 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Nomadix Watchtower" },
+      { title: "Nomadix Watchtower — Internal Monitoring" },
       {
         name: "description",
-        content: "Intern monitoring-dashboard voor alle Nomadix-properties.",
+        content: "Internal monitoring console for all Nomadix properties: uptime, checks and incidents in one dark dashboard.",
       },
       { name: "author", content: "Nomadix" },
-      { property: "og:title", content: "Nomadix Watchtower" },
+      { property: "og:title", content: "Nomadix Watchtower — Internal Monitoring" },
       {
         property: "og:description",
-        content: "Intern monitoring-dashboard voor alle Nomadix-properties.",
+        content: "Internal monitoring console for all Nomadix properties: uptime, checks and incidents in one dark dashboard.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
+      { name: "twitter:title", content: "Nomadix Watchtower — Internal Monitoring" },
+      { name: "twitter:description", content: "Internal monitoring console for all Nomadix properties: uptime, checks and incidents in one dark dashboard." },
+      { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/ac0dcb6f-27bf-4e73-ac3e-46c38fe352a1/id-preview-ab86e565--b9945398-c9e9-49cc-bc0b-97a3b0757531.lovable.app-1785401990172.png" },
+      { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/ac0dcb6f-27bf-4e73-ac3e-46c38fe352a1/id-preview-ab86e565--b9945398-c9e9-49cc-bc0b-97a3b0757531.lovable.app-1785401990172.png" },
     ],
     links: [
       {
