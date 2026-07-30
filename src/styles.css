@@ -123,3 +123,53 @@
   letter-spacing: 0.04em;
   text-transform: uppercase;
 }
+
+@utility status-dot {
+  display: inline-block;
+  width: 0.625rem;
+  height: 0.625rem;
+  border-radius: 9999px;
+}
+
+@utility fade-in-card {
+  animation: wt-fade-in 0.35s ease-out both;
+}
+
+@keyframes wt-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes wt-pulse-crit {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 oklch(0.65 0.21 20 / 55%);
+  }
+  50% {
+    box-shadow: 0 0 0 6px oklch(0.65 0.21 20 / 0%);
+  }
+}
+
+.dot-ok {
+  background-color: var(--ok);
+  box-shadow: 0 0 10px 1px oklch(0.75 0.16 155 / 55%);
+}
+.dot-warn {
+  background-color: var(--warn);
+  box-shadow: 0 0 10px 1px oklch(0.8 0.16 82 / 55%);
+}
+.dot-fail {
+  background-color: var(--crit);
+  box-shadow: 0 0 10px 1px oklch(0.65 0.21 20 / 60%);
+  animation: wt-pulse-crit 1.6s ease-in-out infinite;
+}
+.dot-unknown {
+  background-color: var(--muted-foreground);
+  box-shadow: 0 0 8px 1px oklch(0.68 0.02 250 / 35%);
+}

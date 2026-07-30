@@ -12,7 +12,13 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as AuthenticatedAlertsRouteImport } from './routes/_authenticated/alerts'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
+import { Route as AuthenticatedProposalsRouteImport } from './routes/_authenticated/proposals'
+import { Route as AuthenticatedTargetIdRouteImport } from './routes/_authenticated/target.$id'
+import { Route as AuthenticatedTargetsNewRouteImport } from './routes/_authenticated/targets/new'
+import { Route as ApiPublicDailyRollupRouteImport } from './routes/api/public/daily-rollup'
+import { Route as ApiPublicRunScansRouteImport } from './routes/api/public/run-scans'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -28,46 +34,120 @@ const LoginRoute = LoginRouteImport.update({
   path: '/login',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedAlertsRoute = AuthenticatedAlertsRouteImport.update({
+  id: '/alerts',
+  path: '/alerts',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedProposalsRoute = AuthenticatedProposalsRouteImport.update({
+  id: '/proposals',
+  path: '/proposals',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedTargetIdRoute = AuthenticatedTargetIdRouteImport.update({
+  id: '/target/$id',
+  path: '/target/$id',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedTargetsNewRoute = AuthenticatedTargetsNewRouteImport.update({
+  id: '/targets/new',
+  path: '/targets/new',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const ApiPublicDailyRollupRoute = ApiPublicDailyRollupRouteImport.update({
+  id: '/api/public/daily-rollup',
+  path: '/api/public/daily-rollup',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicRunScansRoute = ApiPublicRunScansRouteImport.update({
+  id: '/api/public/run-scans',
+  path: '/api/public/run-scans',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
+  '/alerts': typeof AuthenticatedAlertsRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
+  '/proposals': typeof AuthenticatedProposalsRoute
+  '/target/$id': typeof AuthenticatedTargetIdRoute
+  '/targets/new': typeof AuthenticatedTargetsNewRoute
+  '/api/public/daily-rollup': typeof ApiPublicDailyRollupRoute
+  '/api/public/run-scans': typeof ApiPublicRunScansRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
+  '/alerts': typeof AuthenticatedAlertsRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
+  '/proposals': typeof AuthenticatedProposalsRoute
+  '/target/$id': typeof AuthenticatedTargetIdRoute
+  '/targets/new': typeof AuthenticatedTargetsNewRoute
+  '/api/public/daily-rollup': typeof ApiPublicDailyRollupRoute
+  '/api/public/run-scans': typeof ApiPublicRunScansRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/login': typeof LoginRoute
+  '/_authenticated/alerts': typeof AuthenticatedAlertsRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
+  '/_authenticated/proposals': typeof AuthenticatedProposalsRoute
+  '/_authenticated/target/$id': typeof AuthenticatedTargetIdRoute
+  '/_authenticated/targets/new': typeof AuthenticatedTargetsNewRoute
+  '/api/public/daily-rollup': typeof ApiPublicDailyRollupRoute
+  '/api/public/run-scans': typeof ApiPublicRunScansRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/login' | '/dashboard'
+  fullPaths:
+    | '/'
+    | '/login'
+    | '/alerts'
+    | '/dashboard'
+    | '/proposals'
+    | '/target/$id'
+    | '/targets/new'
+    | '/api/public/daily-rollup'
+    | '/api/public/run-scans'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/login' | '/dashboard'
+  to:
+    | '/'
+    | '/login'
+    | '/alerts'
+    | '/dashboard'
+    | '/proposals'
+    | '/target/$id'
+    | '/targets/new'
+    | '/api/public/daily-rollup'
+    | '/api/public/run-scans'
   id:
     | '__root__'
     | '/'
     | '/_authenticated'
     | '/login'
+    | '/_authenticated/alerts'
     | '/_authenticated/dashboard'
+    | '/_authenticated/proposals'
+    | '/_authenticated/target/$id'
+    | '/_authenticated/targets/new'
+    | '/api/public/daily-rollup'
+    | '/api/public/run-scans'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   LoginRoute: typeof LoginRoute
+  ApiPublicDailyRollupRoute: typeof ApiPublicDailyRollupRoute
+  ApiPublicRunScansRoute: typeof ApiPublicRunScansRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -93,6 +173,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LoginRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated/alerts': {
+      id: '/_authenticated/alerts'
+      path: '/alerts'
+      fullPath: '/alerts'
+      preLoaderRoute: typeof AuthenticatedAlertsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/dashboard': {
       id: '/_authenticated/dashboard'
       path: '/dashboard'
@@ -100,15 +187,58 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedDashboardRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/proposals': {
+      id: '/_authenticated/proposals'
+      path: '/proposals'
+      fullPath: '/proposals'
+      preLoaderRoute: typeof AuthenticatedProposalsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/target/$id': {
+      id: '/_authenticated/target/$id'
+      path: '/target/$id'
+      fullPath: '/target/$id'
+      preLoaderRoute: typeof AuthenticatedTargetIdRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/targets/new': {
+      id: '/_authenticated/targets/new'
+      path: '/targets/new'
+      fullPath: '/targets/new'
+      preLoaderRoute: typeof AuthenticatedTargetsNewRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/api/public/daily-rollup': {
+      id: '/api/public/daily-rollup'
+      path: '/api/public/daily-rollup'
+      fullPath: '/api/public/daily-rollup'
+      preLoaderRoute: typeof ApiPublicDailyRollupRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/run-scans': {
+      id: '/api/public/run-scans'
+      path: '/api/public/run-scans'
+      fullPath: '/api/public/run-scans'
+      preLoaderRoute: typeof ApiPublicRunScansRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 interface AuthenticatedRouteRouteChildren {
+  AuthenticatedAlertsRoute: typeof AuthenticatedAlertsRoute
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
+  AuthenticatedProposalsRoute: typeof AuthenticatedProposalsRoute
+  AuthenticatedTargetIdRoute: typeof AuthenticatedTargetIdRoute
+  AuthenticatedTargetsNewRoute: typeof AuthenticatedTargetsNewRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
+  AuthenticatedAlertsRoute: AuthenticatedAlertsRoute,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
+  AuthenticatedProposalsRoute: AuthenticatedProposalsRoute,
+  AuthenticatedTargetIdRoute: AuthenticatedTargetIdRoute,
+  AuthenticatedTargetsNewRoute: AuthenticatedTargetsNewRoute,
 }
 
 const AuthenticatedRouteRouteWithChildren =
@@ -118,6 +248,8 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   LoginRoute: LoginRoute,
+  ApiPublicDailyRollupRoute: ApiPublicDailyRollupRoute,
+  ApiPublicRunScansRoute: ApiPublicRunScansRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

@@ -1,15 +1,16 @@
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { Activity, LayoutDashboard, LogOut, Server, Siren } from "lucide-react";
+import { Activity, LayoutDashboard, LogOut, Lightbulb, PlusCircle, Siren } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 const NAV = [
   { to: "/dashboard", label: "Overzicht", icon: LayoutDashboard },
-  { to: "/dashboard", label: "Properties", icon: Server },
-  { to: "/dashboard", label: "Incidents", icon: Siren },
+  { to: "/targets/new", label: "Targets (nieuw)", icon: PlusCircle },
+  { to: "/proposals", label: "Proposals", icon: Lightbulb },
+  { to: "/alerts", label: "Alerts", icon: Siren },
 ] as const;
 
 export function AppShell({ children }: { children: ReactNode }) {
@@ -37,15 +38,13 @@ export function AppShell({ children }: { children: ReactNode }) {
         </Link>
 
         <nav className="mt-8 flex flex-col gap-1">
-          {NAV.map((item, i) => (
+          {NAV.map((item) => (
             <Link
-              key={i}
+              key={item.to}
               to={item.to}
               className={cn(
                 "flex items-center gap-3 rounded-md px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
-                i === 0 &&
-                  pathname === item.to &&
-                  "bg-sidebar-accent text-sidebar-accent-foreground",
+                pathname === item.to && "bg-sidebar-accent text-sidebar-accent-foreground",
               )}
             >
               <item.icon className="size-4" />
