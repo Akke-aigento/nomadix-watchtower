@@ -15,6 +15,7 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as AuthenticatedAlertsRouteImport } from './routes/_authenticated/alerts'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedProposalsRouteImport } from './routes/_authenticated/proposals'
+import { Route as AuthenticatedTargetIdRouteImport } from './routes/_authenticated/target.$id'
 import { Route as AuthenticatedTargetsNewRouteImport } from './routes/_authenticated/targets/new'
 import { Route as ApiPublicDailyRollupRouteImport } from './routes/api/public/daily-rollup'
 import { Route as ApiPublicRunScansRouteImport } from './routes/api/public/run-scans'
@@ -48,6 +49,11 @@ const AuthenticatedProposalsRoute = AuthenticatedProposalsRouteImport.update({
   path: '/proposals',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedTargetIdRoute = AuthenticatedTargetIdRouteImport.update({
+  id: '/target/$id',
+  path: '/target/$id',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedTargetsNewRoute = AuthenticatedTargetsNewRouteImport.update({
   id: '/targets/new',
   path: '/targets/new',
@@ -70,6 +76,7 @@ export interface FileRoutesByFullPath {
   '/alerts': typeof AuthenticatedAlertsRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/proposals': typeof AuthenticatedProposalsRoute
+  '/target/$id': typeof AuthenticatedTargetIdRoute
   '/targets/new': typeof AuthenticatedTargetsNewRoute
   '/api/public/daily-rollup': typeof ApiPublicDailyRollupRoute
   '/api/public/run-scans': typeof ApiPublicRunScansRoute
@@ -80,6 +87,7 @@ export interface FileRoutesByTo {
   '/alerts': typeof AuthenticatedAlertsRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/proposals': typeof AuthenticatedProposalsRoute
+  '/target/$id': typeof AuthenticatedTargetIdRoute
   '/targets/new': typeof AuthenticatedTargetsNewRoute
   '/api/public/daily-rollup': typeof ApiPublicDailyRollupRoute
   '/api/public/run-scans': typeof ApiPublicRunScansRoute
@@ -92,6 +100,7 @@ export interface FileRoutesById {
   '/_authenticated/alerts': typeof AuthenticatedAlertsRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/proposals': typeof AuthenticatedProposalsRoute
+  '/_authenticated/target/$id': typeof AuthenticatedTargetIdRoute
   '/_authenticated/targets/new': typeof AuthenticatedTargetsNewRoute
   '/api/public/daily-rollup': typeof ApiPublicDailyRollupRoute
   '/api/public/run-scans': typeof ApiPublicRunScansRoute
@@ -104,6 +113,7 @@ export interface FileRouteTypes {
     | '/alerts'
     | '/dashboard'
     | '/proposals'
+    | '/target/$id'
     | '/targets/new'
     | '/api/public/daily-rollup'
     | '/api/public/run-scans'
@@ -114,6 +124,7 @@ export interface FileRouteTypes {
     | '/alerts'
     | '/dashboard'
     | '/proposals'
+    | '/target/$id'
     | '/targets/new'
     | '/api/public/daily-rollup'
     | '/api/public/run-scans'
@@ -125,6 +136,7 @@ export interface FileRouteTypes {
     | '/_authenticated/alerts'
     | '/_authenticated/dashboard'
     | '/_authenticated/proposals'
+    | '/_authenticated/target/$id'
     | '/_authenticated/targets/new'
     | '/api/public/daily-rollup'
     | '/api/public/run-scans'
@@ -182,6 +194,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedProposalsRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/target/$id': {
+      id: '/_authenticated/target/$id'
+      path: '/target/$id'
+      fullPath: '/target/$id'
+      preLoaderRoute: typeof AuthenticatedTargetIdRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/targets/new': {
       id: '/_authenticated/targets/new'
       path: '/targets/new'
@@ -210,6 +229,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedAlertsRoute: typeof AuthenticatedAlertsRoute
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedProposalsRoute: typeof AuthenticatedProposalsRoute
+  AuthenticatedTargetIdRoute: typeof AuthenticatedTargetIdRoute
   AuthenticatedTargetsNewRoute: typeof AuthenticatedTargetsNewRoute
 }
 
@@ -217,6 +237,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAlertsRoute: AuthenticatedAlertsRoute,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedProposalsRoute: AuthenticatedProposalsRoute,
+  AuthenticatedTargetIdRoute: AuthenticatedTargetIdRoute,
   AuthenticatedTargetsNewRoute: AuthenticatedTargetsNewRoute,
 }
 
