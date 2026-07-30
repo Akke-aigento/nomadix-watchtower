@@ -10,9 +10,9 @@ export const Route = createFileRoute("/api/public/daily-rollup")({
 });
 
 async function handle(request: Request) {
-  const secret = process.env.CRON_SECRET;
   const provided = request.headers.get("x-cron-secret");
-  if (!secret || !provided || provided !== secret) {
+  const { isValidCronSecret } = await import("@/lib/cron-secret.server");
+  if (!provided || !(await isValidCronSecret(provided))) {
     return new Response("Unauthorized", { status: 401 });
   }
   try {
