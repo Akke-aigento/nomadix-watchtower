@@ -6,6 +6,7 @@
  * Transparency log (crt.sh); when that lookup fails we degrade to `warn`.
  */
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import type { Json } from "@/integrations/supabase/types";
 
 export type CheckStatus = "ok" | "warn" | "fail";
 
@@ -13,7 +14,7 @@ export type CheckOutcome = {
   check_key: string;
   status: CheckStatus;
   latency_ms: number | null;
-  detail: Record<string, unknown> | null;
+  detail: Json;
 };
 
 const WORST: Record<CheckStatus, number> = { ok: 0, warn: 1, fail: 2 };
