@@ -13,6 +13,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
+import { Route as AuthenticatedProposalsRouteImport } from './routes/_authenticated/proposals'
 import { Route as ApiPublicDailyRollupRouteImport } from './routes/api/public/daily-rollup'
 import { Route as ApiPublicRunScansRouteImport } from './routes/api/public/run-scans'
 
@@ -35,6 +36,11 @@ const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
   path: '/dashboard',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedProposalsRoute = AuthenticatedProposalsRouteImport.update({
+  id: '/proposals',
+  path: '/proposals',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const ApiPublicDailyRollupRoute = ApiPublicDailyRollupRouteImport.update({
   id: '/api/public/daily-rollup',
   path: '/api/public/daily-rollup',
@@ -50,6 +56,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
+  '/proposals': typeof AuthenticatedProposalsRoute
   '/api/public/daily-rollup': typeof ApiPublicDailyRollupRoute
   '/api/public/run-scans': typeof ApiPublicRunScansRoute
 }
@@ -57,6 +64,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
+  '/proposals': typeof AuthenticatedProposalsRoute
   '/api/public/daily-rollup': typeof ApiPublicDailyRollupRoute
   '/api/public/run-scans': typeof ApiPublicRunScansRoute
 }
@@ -66,6 +74,7 @@ export interface FileRoutesById {
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/login': typeof LoginRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
+  '/_authenticated/proposals': typeof AuthenticatedProposalsRoute
   '/api/public/daily-rollup': typeof ApiPublicDailyRollupRoute
   '/api/public/run-scans': typeof ApiPublicRunScansRoute
 }
@@ -75,6 +84,7 @@ export interface FileRouteTypes {
     | '/'
     | '/login'
     | '/dashboard'
+    | '/proposals'
     | '/api/public/daily-rollup'
     | '/api/public/run-scans'
   fileRoutesByTo: FileRoutesByTo
@@ -82,6 +92,7 @@ export interface FileRouteTypes {
     | '/'
     | '/login'
     | '/dashboard'
+    | '/proposals'
     | '/api/public/daily-rollup'
     | '/api/public/run-scans'
   id:
@@ -90,6 +101,7 @@ export interface FileRouteTypes {
     | '/_authenticated'
     | '/login'
     | '/_authenticated/dashboard'
+    | '/_authenticated/proposals'
     | '/api/public/daily-rollup'
     | '/api/public/run-scans'
   fileRoutesById: FileRoutesById
@@ -132,6 +144,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedDashboardRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/proposals': {
+      id: '/_authenticated/proposals'
+      path: '/proposals'
+      fullPath: '/proposals'
+      preLoaderRoute: typeof AuthenticatedProposalsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/api/public/daily-rollup': {
       id: '/api/public/daily-rollup'
       path: '/api/public/daily-rollup'
@@ -151,10 +170,12 @@ declare module '@tanstack/react-router' {
 
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
+  AuthenticatedProposalsRoute: typeof AuthenticatedProposalsRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
+  AuthenticatedProposalsRoute: AuthenticatedProposalsRoute,
 }
 
 const AuthenticatedRouteRouteWithChildren =
