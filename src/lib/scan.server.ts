@@ -31,7 +31,11 @@ function hostOf(url: string): string {
   }
 }
 
-async function fetchWithTimeout(url: string, ms: number): Promise<Response> {
+async function fetchWithTimeout(
+  url: string,
+  ms: number,
+  headers: Record<string, string> = {},
+): Promise<Response> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), ms);
   try {
@@ -39,7 +43,7 @@ async function fetchWithTimeout(url: string, ms: number): Promise<Response> {
       method: "GET",
       redirect: "follow",
       signal: controller.signal,
-      headers: { "user-agent": "NomadixWatchtower/1.0" },
+      headers: { "user-agent": "NomadixWatchtower/1.0", ...headers },
     });
   } finally {
     clearTimeout(timer);
