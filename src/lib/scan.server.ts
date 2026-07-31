@@ -31,7 +31,11 @@ function hostOf(url: string): string {
   }
 }
 
-async function fetchWithTimeout(url: string, ms: number): Promise<Response> {
+async function fetchWithTimeout(
+  url: string,
+  ms: number,
+  headers: Record<string, string> = {},
+): Promise<Response> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), ms);
   try {
@@ -39,7 +43,7 @@ async function fetchWithTimeout(url: string, ms: number): Promise<Response> {
       method: "GET",
       redirect: "follow",
       signal: controller.signal,
-      headers: { "user-agent": "NomadixWatchtower/1.0" },
+      headers: { "user-agent": "NomadixWatchtower/1.0", ...headers },
     });
   } finally {
     clearTimeout(timer);
@@ -70,12 +74,72 @@ export async function checkHttp(url: string): Promise<CheckOutcome> {
   }
 }
 
+/** crt.sh rate-limits hard: serialize lookups with a pause in between. */
+let crtChain: Promise<void> = Promise.resolve();
+let lastCrtCall = 0;
+const CRT_PAUSE_MS = 2500;
+
+function crtSlot<T>(fn: () => Promise<T>): Promise<T> {
+  const result = crtChain.then(async () => {
+    const wait = CRT_PAUSE_MS - (Date.now() - lastCrtCall);
+    if (wait > 0) await new Promise((r) => setTimeout(r, wait));
+    try {
+      return await fn();
+    } finally {
+      lastCrtCall = Date.now();
+    }
+  });
+  crtChain = result.then(
+    () => undefined,
+    () => undefined,
+  );
+  return result;
+}
+
+type SslRow = { status: string; detail: Json; measured_at: string };
+
+async function lastSslResult(host: string): Promise<SslRow | null> {
+  const { data } = await supabaseAdmin
+    .from("scan_results")
+    .select("status, detail, measured_at")
+    .eq("check_key", "ssl")
+    .filter("detail->>host", "eq", host)
+    .order("measured_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  return (data as SslRow | null) ?? null;
+}
+
+function isTransient(message: string): boolean {
+  return /\b(429|5\d\d)\b/.test(message) || /\b404\b/.test(message) || /abort|timeout/i.test(message);
+}
+
 export async function checkSsl(url: string): Promise<CheckOutcome> {
   const host = hostOf(url);
+  const previous = await lastSslResult(host);
+  const prevDetail = (previous?.detail ?? null) as { expires_at?: string } | null;
+
+  // (b) reuse a fresh, conclusive result instead of hammering crt.sh
+  if (
+    previous &&
+    previous.status === "ok" &&
+    prevDetail?.expires_at &&
+    Date.now() - Date.parse(previous.measured_at) < 24 * 3600000
+  ) {
+    return {
+      check_key: "ssl",
+      status: "ok",
+      latency_ms: null,
+      detail: previous.detail,
+    };
+  }
+
   try {
-    const res = await fetchWithTimeout(
-      `https://crt.sh/?q=${encodeURIComponent(host)}&output=json&exclude=expired`,
-      15000,
+    const res = await crtSlot(() =>
+      fetchWithTimeout(
+        `https://crt.sh/?q=${encodeURIComponent(host)}&output=json&exclude=expired`,
+        15000,
+      ),
     );
     if (!res.ok) throw new Error(`crt.sh status ${res.status}`);
     const rows = (await res.json()) as Array<{ not_after?: string; name_value?: string }>;
@@ -95,15 +159,51 @@ export async function checkSsl(url: string): Promise<CheckOutcome> {
       detail: { host, days_left: daysLeft, expires_at: new Date(expiresAt).toISOString() },
     };
   } catch (e) {
+    const message = e instanceof Error ? e.message : String(e);
+
+    // (c) transient failures must never downgrade a host to warn
+    if (isTransient(message)) {
+      if (previous) {
+        return {
+          check_key: "ssl",
+          status: previous.status as CheckStatus,
+          latency_ms: null,
+          detail: {
+            ...(typeof previous.detail === "object" && previous.detail !== null
+              ? (previous.detail as Record<string, Json>)
+              : {}),
+            host,
+            note: `lookup overgeslagen: ${message}`,
+          },
+        };
+      }
+      return {
+        check_key: "ssl",
+        status: "ok",
+        latency_ms: null,
+        detail: { host, note: "vervaldatum nog niet bepaald" },
+      };
+    }
+
+    if (previous) {
+      return {
+        check_key: "ssl",
+        status: previous.status as CheckStatus,
+        latency_ms: null,
+        detail: {
+          ...(typeof previous.detail === "object" && previous.detail !== null
+            ? (previous.detail as Record<string, Json>)
+            : {}),
+          host,
+          note: `lookup overgeslagen: ${message}`,
+        },
+      };
+    }
     return {
       check_key: "ssl",
-      status: "warn",
+      status: "ok",
       latency_ms: null,
-      detail: {
-        host,
-        error: e instanceof Error ? e.message : String(e),
-        note: "certificaat-vervaldatum kon niet bepaald worden",
-      },
+      detail: { host, note: "vervaldatum nog niet bepaald", error: message },
     };
   }
 }
@@ -112,6 +212,7 @@ async function txtRecords(name: string): Promise<string[]> {
   const res = await fetchWithTimeout(
     `https://cloudflare-dns.com/dns-query?name=${encodeURIComponent(name)}&type=TXT`,
     15000,
+    { accept: "application/dns-json" },
   );
   if (!res.ok) throw new Error(`DoH status ${res.status}`);
   const json = (await res.json()) as { Answer?: Array<{ data?: string }> };
