@@ -210,9 +210,8 @@ export async function checkSsl(url: string): Promise<CheckOutcome> {
 
 async function txtRecords(name: string): Promise<string[]> {
   const res = await fetchWithTimeout(
-    `https://cloudflare-dns.com/dns-query?name=${encodeURIComponent(name)}&type=TXT`,
+    `https://dns.google/resolve?name=${encodeURIComponent(name)}&type=TXT`,
     15000,
-    { accept: "application/dns-json" },
   );
   if (!res.ok) throw new Error(`DoH status ${res.status}`);
   const json = (await res.json()) as { Answer?: Array<{ data?: string }> };
