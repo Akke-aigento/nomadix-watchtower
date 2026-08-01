@@ -179,6 +179,8 @@ export type Database = {
           enabled: boolean
           form_smoke_url: string | null
           frequency: string
+          health_token: string | null
+          health_url: string | null
           id: string
           kind: string
           last_scanned_at: string | null
@@ -194,6 +196,8 @@ export type Database = {
           enabled?: boolean
           form_smoke_url?: string | null
           frequency?: string
+          health_token?: string | null
+          health_url?: string | null
           id?: string
           kind: string
           last_scanned_at?: string | null
@@ -209,6 +213,8 @@ export type Database = {
           enabled?: boolean
           form_smoke_url?: string | null
           frequency?: string
+          health_token?: string | null
+          health_url?: string | null
           id?: string
           kind?: string
           last_scanned_at?: string | null
