@@ -244,6 +244,61 @@ export async function checkDns(url: string): Promise<CheckOutcome> {
   }
 }
 
+export async function checkHealth(
+  healthUrl: string,
+  token: string | null,
+): Promise<CheckOutcome> {
+  const started = Date.now();
+  try {
+    const res = await fetchWithTimeout(
+      healthUrl,
+      15000,
+      token ? { "x-health-token": token } : {},
+    );
+    const latency = Date.now() - started;
+    const text = await res.text();
+    if (res.status !== 200) {
+      return {
+        check_key: "health",
+        status: "fail",
+        latency_ms: latency,
+        detail: { error: `HTTP ${res.status}`, body: text.slice(0, 500), url: healthUrl },
+      };
+    }
+    let json: unknown;
+    try {
+      json = JSON.parse(text);
+    } catch {
+      return {
+        check_key: "health",
+        status: "fail",
+        latency_ms: latency,
+        detail: { error: "ongeldige JSON", body: text.slice(0, 500), url: healthUrl },
+      };
+    }
+    const payload = json as { status?: string };
+    const reported = payload?.status;
+    const status: CheckStatus =
+      reported === "ok" || reported === "warn" || reported === "fail" ? reported : "fail";
+    return {
+      check_key: "health",
+      status,
+      latency_ms: latency,
+      detail:
+        reported === status
+          ? (json as Json)
+          : ({ ...(json as Record<string, Json>), error: `onbekende status: ${String(reported)}` } as Json),
+    };
+  } catch (e) {
+    return {
+      check_key: "health",
+      status: "fail",
+      latency_ms: Date.now() - started,
+      detail: { error: e instanceof Error ? e.message : String(e), url: healthUrl },
+    };
+  }
+}
+
 export async function checkFormSmoke(smokeUrl: string): Promise<CheckOutcome> {
   const started = Date.now();
   try {
@@ -264,7 +319,7 @@ export async function checkFormSmoke(smokeUrl: string): Promise<CheckOutcome> {
   }
 }
 
-async function sendAlertMail(subject: string, html: string): Promise<boolean> {
+export async function sendAlertMail(subject: string, html: string): Promise<boolean> {
   const key = process.env.RESEND_API_KEY;
   if (!key) return false;
   try {
@@ -315,6 +370,8 @@ export async function runScans() {
     if (checks.dns) outcomes.push(await checkDns(target.url));
     if (checks.form_smoke && target.form_smoke_url)
       outcomes.push(await checkFormSmoke(target.form_smoke_url));
+    if (checks.health && target.health_url)
+      outcomes.push(await checkHealth(target.health_url, target.health_token));
     if (!outcomes.length) continue;
 
     // previous status per check_key (before inserting this run)
