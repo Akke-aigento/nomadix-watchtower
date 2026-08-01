@@ -21,6 +21,7 @@ export const CHECK_LABEL: Record<string, string> = {
   ssl: "SSL",
   dns: "DNS",
   form_smoke: "Formulier",
+  health: "Health",
 };
 
 export const CATEGORY_LABEL: Record<string, string> = {

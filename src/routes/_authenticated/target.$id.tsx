@@ -50,6 +50,8 @@ type Form = {
   enabled: boolean;
   checks: Record<string, boolean>;
   form_smoke_url: string;
+  health_url: string;
+  health_token: string;
   notes: string;
 };
 
@@ -125,6 +127,8 @@ function TargetDetailPage() {
       enabled: target.enabled,
       checks: (target.checks ?? {}) as Record<string, boolean>,
       form_smoke_url: target.form_smoke_url ?? "",
+      health_url: target.health_url ?? "",
+      health_token: target.health_token ?? "",
       notes: target.notes ?? "",
     });
   }, [target, form]);
@@ -140,6 +144,8 @@ function TargetDetailPage() {
           enabled: values.enabled,
           checks: values.checks,
           form_smoke_url: values.form_smoke_url.trim() || null,
+          health_url: values.health_url.trim() || null,
+          health_token: values.health_token.trim() || null,
           notes: values.notes.trim() || null,
         })
         .eq("id", id);
@@ -277,6 +283,29 @@ function TargetDetailPage() {
                   value={form.form_smoke_url}
                   onChange={(e) => setForm({ ...form, form_smoke_url: e.target.value })}
                 />
+              </div>
+            )}
+
+            {form.checks.health && (
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="health_url">Health-URL</Label>
+                  <Input
+                    id="health_url"
+                    value={form.health_url}
+                    onChange={(e) => setForm({ ...form, health_url: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="health_token">Health-token</Label>
+                  <Input
+                    id="health_token"
+                    type="password"
+                    autoComplete="off"
+                    value={form.health_token}
+                    onChange={(e) => setForm({ ...form, health_token: e.target.value })}
+                  />
+                </div>
               </div>
             )}
 

@@ -18,6 +18,7 @@ import { Route as AuthenticatedProposalsRouteImport } from './routes/_authentica
 import { Route as AuthenticatedTargetIdRouteImport } from './routes/_authenticated/target.$id'
 import { Route as AuthenticatedTargetsNewRouteImport } from './routes/_authenticated/targets/new'
 import { Route as ApiPublicDailyRollupRouteImport } from './routes/api/public/daily-rollup'
+import { Route as ApiPublicMorningBriefRouteImport } from './routes/api/public/morning-brief'
 import { Route as ApiPublicRunScansRouteImport } from './routes/api/public/run-scans'
 
 const IndexRoute = IndexRouteImport.update({
@@ -64,6 +65,11 @@ const ApiPublicDailyRollupRoute = ApiPublicDailyRollupRouteImport.update({
   path: '/api/public/daily-rollup',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicMorningBriefRoute = ApiPublicMorningBriefRouteImport.update({
+  id: '/api/public/morning-brief',
+  path: '/api/public/morning-brief',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicRunScansRoute = ApiPublicRunScansRouteImport.update({
   id: '/api/public/run-scans',
   path: '/api/public/run-scans',
@@ -79,6 +85,7 @@ export interface FileRoutesByFullPath {
   '/target/$id': typeof AuthenticatedTargetIdRoute
   '/targets/new': typeof AuthenticatedTargetsNewRoute
   '/api/public/daily-rollup': typeof ApiPublicDailyRollupRoute
+  '/api/public/morning-brief': typeof ApiPublicMorningBriefRoute
   '/api/public/run-scans': typeof ApiPublicRunScansRoute
 }
 export interface FileRoutesByTo {
@@ -90,6 +97,7 @@ export interface FileRoutesByTo {
   '/target/$id': typeof AuthenticatedTargetIdRoute
   '/targets/new': typeof AuthenticatedTargetsNewRoute
   '/api/public/daily-rollup': typeof ApiPublicDailyRollupRoute
+  '/api/public/morning-brief': typeof ApiPublicMorningBriefRoute
   '/api/public/run-scans': typeof ApiPublicRunScansRoute
 }
 export interface FileRoutesById {
@@ -103,6 +111,7 @@ export interface FileRoutesById {
   '/_authenticated/target/$id': typeof AuthenticatedTargetIdRoute
   '/_authenticated/targets/new': typeof AuthenticatedTargetsNewRoute
   '/api/public/daily-rollup': typeof ApiPublicDailyRollupRoute
+  '/api/public/morning-brief': typeof ApiPublicMorningBriefRoute
   '/api/public/run-scans': typeof ApiPublicRunScansRoute
 }
 export interface FileRouteTypes {
@@ -116,6 +125,7 @@ export interface FileRouteTypes {
     | '/target/$id'
     | '/targets/new'
     | '/api/public/daily-rollup'
+    | '/api/public/morning-brief'
     | '/api/public/run-scans'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -127,6 +137,7 @@ export interface FileRouteTypes {
     | '/target/$id'
     | '/targets/new'
     | '/api/public/daily-rollup'
+    | '/api/public/morning-brief'
     | '/api/public/run-scans'
   id:
     | '__root__'
@@ -139,6 +150,7 @@ export interface FileRouteTypes {
     | '/_authenticated/target/$id'
     | '/_authenticated/targets/new'
     | '/api/public/daily-rollup'
+    | '/api/public/morning-brief'
     | '/api/public/run-scans'
   fileRoutesById: FileRoutesById
 }
@@ -147,6 +159,7 @@ export interface RootRouteChildren {
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   LoginRoute: typeof LoginRoute
   ApiPublicDailyRollupRoute: typeof ApiPublicDailyRollupRoute
+  ApiPublicMorningBriefRoute: typeof ApiPublicMorningBriefRoute
   ApiPublicRunScansRoute: typeof ApiPublicRunScansRoute
 }
 
@@ -215,6 +228,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicDailyRollupRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/morning-brief': {
+      id: '/api/public/morning-brief'
+      path: '/api/public/morning-brief'
+      fullPath: '/api/public/morning-brief'
+      preLoaderRoute: typeof ApiPublicMorningBriefRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/run-scans': {
       id: '/api/public/run-scans'
       path: '/api/public/run-scans'
@@ -249,6 +269,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   LoginRoute: LoginRoute,
   ApiPublicDailyRollupRoute: ApiPublicDailyRollupRoute,
+  ApiPublicMorningBriefRoute: ApiPublicMorningBriefRoute,
   ApiPublicRunScansRoute: ApiPublicRunScansRoute,
 }
 export const routeTree = rootRouteImport
