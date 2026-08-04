@@ -232,6 +232,7 @@ export type Database = {
     }
     Functions: {
       get_cron_secret: { Args: never; Returns: string }
+      get_heartbeat_url: { Args: never; Returns: string }
     }
     Enums: {
       [_ in never]: never
