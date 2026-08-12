@@ -1,14 +1,18 @@
-# Welcome to your Lovable project
+# Nomadix Watchtower
+
+Nieuw project: "Nomadix Watchtower" — een intern monitoring-dashboard (dark theme) voor alle Nomadix-properties. Zet alvast Lovable Cloud (database) aan en maak een minimale app-shell met een /login-pagina (Supabase e-mail/wachtwoord auth, geen signup). De volledige spec (database, edge functions, crons, dashboard-UI, seed data) volgt in mijn volgende bericht — bouw nu enkel de shell en wacht daarop.
 
 This project was built with [Lovable](https://lovable.dev).
 
+**Live app**: https://nomadix-watchtower.lovable.app
+
 ## Build with Lovable
 
-Open your project in the [Lovable editor](https://lovable.dev) and keep building.
+Continue developing this project in the [Lovable editor](https://lovable.dev/projects/b9945398-c9e9-49cc-bc0b-97a3b0757531).
 
 - **Ship faster**: describe what you want to build and Lovable handles the code.
-- **Stay in sync**: connect the project to GitHub and every change made in Lovable is committed straight to your repository.
-- **Full ownership**: this code is yours. Push to your repository and your changes sync back into Lovable, ready for your next prompt.
+- **Stay in sync**: every change made in Lovable is committed straight to this repository.
+- **Full ownership**: this code is yours. Push to `main` on GitHub and your changes sync back into Lovable, ready for your next prompt.
 
 ## Development
 
@@ -20,10 +24,3 @@ cd <repository-name>
 npm i
 npm run dev
 ```
-
-## Built with
-
-- TanStack Start
-- TypeScript
-- React
-- Tailwind CSS
