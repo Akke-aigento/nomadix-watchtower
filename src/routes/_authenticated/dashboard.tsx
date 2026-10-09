@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { AppShell } from "@/components/app-shell";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
+import { IncidentList, isAcknowledged, useIncidents } from "@/components/incidents";
 import {
   CategoryBadge,
   KindBadge,
@@ -109,6 +110,16 @@ function DashboardPage() {
     return r !== 0 ? r : a.name.localeCompare(b.name, "nl");
   });
 
+  const incidentsQuery = useIncidents();
+  const incidents = incidentsQuery.data ?? [];
+  const activeIncidents = incidents.filter((i) => !isAcknowledged(i) && i.severity !== "monitor");
+  const headline =
+    activeIncidents.some((i) => i.severity === "actie")
+      ? `${activeIncidents.filter((i) => i.severity === "actie").length} ding(en) vragen actie`
+      : activeIncidents.length > 0
+        ? `${activeIncidents.length} ding(en) vragen aandacht`
+        : "Alles rustig";
+
   const proposed = (proposalsQuery.data ?? []).filter((p) => p.status === "proposed");
   const approved = (proposalsQuery.data ?? []).filter((p) => p.status === "approved");
 
@@ -117,7 +128,7 @@ function DashboardPage() {
       <div className="space-y-8">
         <header className="fade-in-card panel flex flex-wrap items-center gap-6 p-5">
           <div>
-            <h1 className="text-lg font-semibold tracking-tight">Overzicht</h1>
+            <h1 className="text-lg font-semibold tracking-tight">{headline}</h1>
             <p className="text-tech mt-1 text-[11px] text-muted-foreground">
               Laatste scan: {relativeTime(lastScan)}
             </p>
@@ -128,6 +139,15 @@ function DashboardPage() {
             <Metric label="Fail" value={counts.fail} status="fail" />
           </div>
         </header>
+
+        <section className="space-y-3">
+          <h2 className="text-tech text-xs text-muted-foreground">Incidenten</h2>
+          {incidentsQuery.isLoading ? (
+            <p className="text-sm text-muted-foreground">Laden…</p>
+          ) : (
+            <IncidentList incidents={incidents} emptyText="Geen open incidenten — alles rustig." />
+          )}
+        </section>
 
         {proposed.length + approved.length > 0 && (
           <section className="space-y-3">

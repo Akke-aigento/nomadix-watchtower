@@ -6,7 +6,7 @@ export const STATUS_LABEL: Record<Status, string> = {
   ok: "OK",
   warn: "Waarschuwing",
   fail: "Storing",
-  unknown: "Onbekend",
+  unknown: "Niet gemeten",
 };
 
 export const KIND_LABEL: Record<string, string> = {

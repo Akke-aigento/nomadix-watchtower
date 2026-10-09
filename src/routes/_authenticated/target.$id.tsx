@@ -17,6 +17,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
+import { IncidentList, useIncidents } from "@/components/incidents";
 import {
   CHECK_LABEL,
   KindBadge,
@@ -117,6 +118,7 @@ function TargetDetailPage() {
   });
 
   const target = targetQuery.data;
+  const incidentsQuery = useIncidents({ targetId: id, includeResolved: true });
 
   useEffect(() => {
     if (!target || form) return;
@@ -214,6 +216,15 @@ function TargetDetailPage() {
             </p>
           </div>
         </header>
+
+        <section className="space-y-3">
+          <h2 className="text-tech text-xs text-muted-foreground">Incidenten</h2>
+          <IncidentList
+            incidents={(incidentsQuery.data ?? []).slice(0, 10)}
+            showTarget={false}
+            emptyText="Nog geen incidenten voor dit target."
+          />
+        </section>
 
         {form && (
           <section className="panel fade-in-card space-y-5 p-5">

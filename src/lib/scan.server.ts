@@ -1,323 +1,31 @@
 /**
- * Watchtower scan engine (server-only).
+ * Watchtower scan-orkestratie (server-only).
  *
- * NOTE: runs in the edge/worker runtime, so raw TLS sockets are unavailable.
- * The SSL check therefore reads certificate expiry from the public Certificate
- * Transparency log (crt.sh); when that lookup fails we degrade to `warn`.
+ * Per run (cron elke 10 min):
+ *  1. per target per check: is die check aan de beurt? (policy.isCheckDue)
+ *  2. meten (checks.server) en resultaten opslaan
+ *  3. per gemeten check het incident openen / bijwerken / sluiten (policy.decide)
+ *  4. target-status herberekenen uit de laatste meting per check
+ *
+ * Mails gaan enkel uit bij een nieuw (of naar actie geëscaleerd) incident met
+ * ernst "actie" en bij herstel daarvan — niet meer bij elke statusovergang.
  */
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import type { Json } from "@/integrations/supabase/types";
+import {
+  checkDns,
+  checkFormSmoke,
+  checkHealth,
+  checkHttp,
+  checkSsl,
+  type CheckOutcome,
+  type CheckStatus,
+} from "@/lib/checks.server";
+import { checkName, decide, describe, isCheckDue, targetStatus, type Severity } from "@/lib/policy";
 
-export type CheckStatus = "ok" | "warn" | "fail";
+export type { CheckOutcome, CheckStatus } from "@/lib/checks.server";
 
-export type CheckOutcome = {
-  check_key: string;
-  status: CheckStatus;
-  latency_ms: number | null;
-  detail: Json;
-};
-
-const WORST: Record<CheckStatus, number> = { ok: 0, warn: 1, fail: 2 };
-
-export function worstStatus(list: CheckStatus[]): CheckStatus {
-  return list.reduce<CheckStatus>((acc, s) => (WORST[s] > WORST[acc] ? s : acc), "ok");
-}
-
-function hostOf(url: string): string {
-  try {
-    return new URL(url).hostname;
-  } catch {
-    return url.replace(/^https?:\/\//, "").split("/")[0];
-  }
-}
-
-async function fetchWithTimeout(
-  url: string,
-  ms: number,
-  headers: Record<string, string> = {},
-): Promise<Response> {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), ms);
-  try {
-    return await fetch(url, {
-      method: "GET",
-      redirect: "follow",
-      signal: controller.signal,
-      headers: { "user-agent": "NomadixWatchtower/1.0", ...headers },
-    });
-  } finally {
-    clearTimeout(timer);
-  }
-}
-
-export async function checkHttp(url: string): Promise<CheckOutcome> {
-  const started = Date.now();
-  try {
-    const res = await fetchWithTimeout(url, 15000);
-    const latency = Date.now() - started;
-    let status: CheckStatus = "ok";
-    if (res.status >= 400) status = "fail";
-    else if (latency > 5000) status = "warn";
-    return {
-      check_key: "http",
-      status,
-      latency_ms: latency,
-      detail: { http_status: res.status, url },
-    };
-  } catch (e) {
-    return {
-      check_key: "http",
-      status: "fail",
-      latency_ms: Date.now() - started,
-      detail: { error: e instanceof Error ? e.message : String(e), url },
-    };
-  }
-}
-
-/** crt.sh rate-limits hard: serialize lookups with a pause in between. */
-let crtChain: Promise<void> = Promise.resolve();
-let lastCrtCall = 0;
-const CRT_PAUSE_MS = 2500;
-
-function crtSlot<T>(fn: () => Promise<T>): Promise<T> {
-  const result = crtChain.then(async () => {
-    const wait = CRT_PAUSE_MS - (Date.now() - lastCrtCall);
-    if (wait > 0) await new Promise((r) => setTimeout(r, wait));
-    try {
-      return await fn();
-    } finally {
-      lastCrtCall = Date.now();
-    }
-  });
-  crtChain = result.then(
-    () => undefined,
-    () => undefined,
-  );
-  return result;
-}
-
-type SslRow = { status: string; detail: Json; measured_at: string };
-
-async function lastSslResult(host: string): Promise<SslRow | null> {
-  const { data } = await supabaseAdmin
-    .from("scan_results")
-    .select("status, detail, measured_at")
-    .eq("check_key", "ssl")
-    .filter("detail->>host", "eq", host)
-    .order("measured_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-  return (data as SslRow | null) ?? null;
-}
-
-function isTransient(message: string): boolean {
-  return /\b(429|5\d\d)\b/.test(message) || /\b404\b/.test(message) || /abort|timeout/i.test(message);
-}
-
-export async function checkSsl(url: string): Promise<CheckOutcome> {
-  const host = hostOf(url);
-  const previous = await lastSslResult(host);
-  const prevDetail = (previous?.detail ?? null) as { expires_at?: string } | null;
-
-  // (b) reuse a fresh, conclusive result instead of hammering crt.sh
-  if (
-    previous &&
-    previous.status === "ok" &&
-    prevDetail?.expires_at &&
-    Date.now() - Date.parse(previous.measured_at) < 24 * 3600000
-  ) {
-    return {
-      check_key: "ssl",
-      status: "ok",
-      latency_ms: null,
-      detail: previous.detail,
-    };
-  }
-
-  try {
-    const res = await crtSlot(() =>
-      fetchWithTimeout(
-        `https://crt.sh/?q=${encodeURIComponent(host)}&output=json&exclude=expired`,
-        15000,
-      ),
-    );
-    if (!res.ok) throw new Error(`crt.sh status ${res.status}`);
-    const rows = (await res.json()) as Array<{ not_after?: string; name_value?: string }>;
-    const dates = rows
-      .map((r) => (r.not_after ? Date.parse(`${r.not_after}Z`) : NaN))
-      .filter((n) => Number.isFinite(n)) as number[];
-    if (!dates.length) throw new Error("geen certificaten gevonden");
-    const expiresAt = Math.max(...dates);
-    const daysLeft = Math.floor((expiresAt - Date.now()) / 86400000);
-    let status: CheckStatus = "ok";
-    if (daysLeft < 7) status = "fail";
-    else if (daysLeft < 21) status = "warn";
-    return {
-      check_key: "ssl",
-      status,
-      latency_ms: null,
-      detail: { host, days_left: daysLeft, expires_at: new Date(expiresAt).toISOString() },
-    };
-  } catch (e) {
-    const message = e instanceof Error ? e.message : String(e);
-
-    // (c) transient failures must never downgrade a host to warn
-    if (isTransient(message)) {
-      if (previous) {
-        return {
-          check_key: "ssl",
-          status: previous.status as CheckStatus,
-          latency_ms: null,
-          detail: {
-            ...(typeof previous.detail === "object" && previous.detail !== null
-              ? (previous.detail as Record<string, Json>)
-              : {}),
-            host,
-            note: `lookup overgeslagen: ${message}`,
-          },
-        };
-      }
-      return {
-        check_key: "ssl",
-        status: "ok",
-        latency_ms: null,
-        detail: { host, note: "vervaldatum nog niet bepaald" },
-      };
-    }
-
-    if (previous) {
-      return {
-        check_key: "ssl",
-        status: previous.status as CheckStatus,
-        latency_ms: null,
-        detail: {
-          ...(typeof previous.detail === "object" && previous.detail !== null
-            ? (previous.detail as Record<string, Json>)
-            : {}),
-          host,
-          note: `lookup overgeslagen: ${message}`,
-        },
-      };
-    }
-    return {
-      check_key: "ssl",
-      status: "ok",
-      latency_ms: null,
-      detail: { host, note: "vervaldatum nog niet bepaald", error: message },
-    };
-  }
-}
-
-async function txtRecords(name: string): Promise<string[]> {
-  const res = await fetchWithTimeout(
-    `https://dns.google/resolve?name=${encodeURIComponent(name)}&type=TXT`,
-    15000,
-  );
-  if (!res.ok) throw new Error(`DoH status ${res.status}`);
-  const json = (await res.json()) as { Answer?: Array<{ data?: string }> };
-  return (json.Answer ?? []).map((a) => (a.data ?? "").replace(/"/g, ""));
-}
-
-export async function checkDns(url: string): Promise<CheckOutcome> {
-  const host = hostOf(url);
-  try {
-    const [spfRecords, dmarcRecords] = await Promise.all([
-      txtRecords(host),
-      txtRecords(`_dmarc.${host}`).catch(() => [] as string[]),
-    ]);
-    const hasSpf = spfRecords.some((r) => r.toLowerCase().includes("v=spf1"));
-    const hasDmarc = dmarcRecords.some((r) => r.toUpperCase().includes("V=DMARC1"));
-    const status: CheckStatus = hasSpf && hasDmarc ? "ok" : "warn";
-    return {
-      check_key: "dns",
-      status,
-      latency_ms: null,
-      detail: { host, spf: hasSpf, dmarc: hasDmarc },
-    };
-  } catch (e) {
-    return {
-      check_key: "dns",
-      status: "warn",
-      latency_ms: null,
-      detail: { host, error: e instanceof Error ? e.message : String(e) },
-    };
-  }
-}
-
-export async function checkHealth(
-  healthUrl: string,
-  token: string | null,
-): Promise<CheckOutcome> {
-  const started = Date.now();
-  try {
-    const res = await fetchWithTimeout(
-      healthUrl,
-      15000,
-      token ? { "x-health-token": token } : {},
-    );
-    const latency = Date.now() - started;
-    const text = await res.text();
-    if (res.status !== 200) {
-      return {
-        check_key: "health",
-        status: "fail",
-        latency_ms: latency,
-        detail: { error: `HTTP ${res.status}`, body: text.slice(0, 500), url: healthUrl },
-      };
-    }
-    let json: unknown;
-    try {
-      json = JSON.parse(text);
-    } catch {
-      return {
-        check_key: "health",
-        status: "fail",
-        latency_ms: latency,
-        detail: { error: "ongeldige JSON", body: text.slice(0, 500), url: healthUrl },
-      };
-    }
-    const payload = json as { status?: string };
-    const reported = payload?.status;
-    const status: CheckStatus =
-      reported === "ok" || reported === "warn" || reported === "fail" ? reported : "fail";
-    return {
-      check_key: "health",
-      status,
-      latency_ms: latency,
-      detail:
-        reported === status
-          ? (json as Json)
-          : ({ ...(json as Record<string, Json>), error: `onbekende status: ${String(reported)}` } as Json),
-    };
-  } catch (e) {
-    return {
-      check_key: "health",
-      status: "fail",
-      latency_ms: Date.now() - started,
-      detail: { error: e instanceof Error ? e.message : String(e), url: healthUrl },
-    };
-  }
-}
-
-export async function checkFormSmoke(smokeUrl: string): Promise<CheckOutcome> {
-  const started = Date.now();
-  try {
-    const res = await fetchWithTimeout(smokeUrl, 15000);
-    return {
-      check_key: "form_smoke",
-      status: res.status >= 400 ? "fail" : "ok",
-      latency_ms: Date.now() - started,
-      detail: { http_status: res.status, url: smokeUrl },
-    };
-  } catch (e) {
-    return {
-      check_key: "form_smoke",
-      status: "fail",
-      latency_ms: Date.now() - started,
-      detail: { error: e instanceof Error ? e.message : String(e), url: smokeUrl },
-    };
-  }
-}
+const DASHBOARD_URL = "https://nomadix-watchtower.lovable.app";
 
 export async function sendAlertMail(subject: string, html: string): Promise<boolean> {
   const key = process.env.RESEND_API_KEY;
@@ -344,91 +52,272 @@ export async function sendAlertMail(subject: string, html: string): Promise<bool
   }
 }
 
-function isDue(frequency: string, lastScannedAt: string | null): boolean {
-  if (!lastScannedAt) return true;
-  const ageHours = (Date.now() - Date.parse(lastScannedAt)) / 3600000;
-  return frequency === "weekly" ? ageHours > 24 * 6 : ageHours > 20;
+function esc(value: unknown): string {
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}
+
+type Target = {
+  id: string;
+  name: string;
+  url: string;
+  kind: string;
+  frequency: string;
+  checks: Json;
+  form_smoke_url: string | null;
+  health_url: string | null;
+  health_token: string | null;
+  status: string;
+};
+
+type Incident = {
+  id: string;
+  target_id: string;
+  check_key: string;
+  severity: string;
+  status: string;
+  title: string;
+  acknowledged_until: string | null;
+  notified_at: string | null;
+};
+
+type RecentRow = { check_key: string; status: CheckStatus; measured_at: string; detail: Json };
+
+function enabledChecks(t: Target): string[] {
+  const c = (t.checks ?? {}) as Record<string, boolean>;
+  const list: string[] = [];
+  if (c.http !== false) list.push("http");
+  if (c.ssl) list.push("ssl");
+  if (c.dns) list.push("dns");
+  if (c.form_smoke && t.form_smoke_url) list.push("form_smoke");
+  if (c.health && t.health_url) list.push("health");
+  return list;
+}
+
+function runCheck(t: Target, key: string): Promise<CheckOutcome> {
+  switch (key) {
+    case "http":
+      return checkHttp(t.url);
+    case "ssl":
+      return checkSsl(t.url);
+    case "dns":
+      return checkDns(t.url);
+    case "form_smoke":
+      return checkFormSmoke(t.form_smoke_url!);
+    case "health":
+      return checkHealth(t.health_url!, t.health_token);
+    default:
+      throw new Error(`onbekende check ${key}`);
+  }
+}
+
+function isAcknowledged(inc: Pick<Incident, "acknowledged_until"> | undefined, now = Date.now()): boolean {
+  return !!inc?.acknowledged_until && Date.parse(inc.acknowledged_until) > now;
+}
+
+async function addEvent(incidentId: string, kind: string, message: string) {
+  await supabaseAdmin.from("incident_events").insert({ incident_id: incidentId, kind, message });
+}
+
+function incidentMail(target: Target, title: string, summary: string, recovered: boolean) {
+  const color = recovered ? "#1F7A63" : "#C8402B";
+  const label = recovered ? "Opgelost" : "Actie nodig";
+  const subject = recovered ? `Opgelost · ${target.name} — ${title}` : `ACTIE · ${target.name} — ${title}`;
+  const html = `<div style="background:#ECE9E3;padding:24px;font-family:Arial,sans-serif;color:#17191A">
+  <div style="max-width:560px;margin:0 auto;background:#fff;border-radius:14px;overflow:hidden">
+    <div style="background:${color};color:#fff;padding:12px 24px;font:600 12px/1.4 Arial,sans-serif;letter-spacing:.08em;text-transform:uppercase">${label}</div>
+    <div style="padding:22px 24px">
+      <div style="font:600 13px/1.4 Arial,sans-serif;color:#5C6266">${esc(target.name)}</div>
+      <div style="font:600 22px/1.25 Arial,sans-serif;margin:6px 0 10px">${esc(title)}</div>
+      ${summary ? `<div style="font:400 15px/1.5 Arial,sans-serif;color:#3E4447">${esc(summary)}</div>` : ""}
+      <div style="margin-top:20px"><a href="${DASHBOARD_URL}/target/${target.id}" style="display:inline-block;background:#17191A;color:#F5F3EF;text-decoration:none;font:600 14px/1 Arial,sans-serif;padding:12px 18px;border-radius:10px">Open in Watchtower</a></div>
+    </div>
+  </div>
+</div>`;
+  return { subject, html };
+}
+
+async function logAlert(targetId: string, checkKey: string, transition: string, mailed: boolean, detail: Json) {
+  await supabaseAdmin.from("alert_log").insert({ target_id: targetId, check_key: checkKey, transition, mailed, detail });
+}
+
+/** Incident-levenscyclus voor één target+check na een nieuwe meting. */
+async function applyIncident(
+  target: Target,
+  outcome: CheckOutcome,
+  history: CheckStatus[],
+  open: Incident | undefined,
+): Promise<Incident | undefined> {
+  const decision = decide(outcome.check_key, history);
+  const nowIso = new Date().toISOString();
+
+  if (decision.kind === "none") {
+    if (open?.severity === "monitor" && outcome.status !== "unknown") {
+      // de monitor kan weer meten: monitor-incident sluiten
+      await supabaseAdmin
+        .from("incidents")
+        .update({ status: "resolved", resolved_at: nowIso, last_seen_at: nowIso })
+        .eq("id", open.id);
+      await addEvent(open.id, "resolved", "meting lukt weer");
+      return undefined;
+    }
+    if (open && outcome.status !== "unknown") {
+      await supabaseAdmin.from("incidents").update({ last_seen_at: nowIso }).eq("id", open.id);
+    }
+    return open;
+  }
+
+  if (decision.kind === "resolve") {
+    if (!open) return undefined;
+    await supabaseAdmin
+      .from("incidents")
+      .update({ status: "resolved", resolved_at: nowIso, last_seen_at: nowIso })
+      .eq("id", open.id);
+    await addEvent(open.id, "resolved", `${checkName(outcome.check_key)} terug in orde`);
+    let mailed = false;
+    if (open.severity === "actie" && open.notified_at) {
+      const m = incidentMail(target, open.title, "Terug in orde.", true);
+      mailed = await sendAlertMail(m.subject, m.html);
+    }
+    await logAlert(target.id, outcome.check_key, `resolved:${open.severity}`, mailed, outcome.detail);
+    return undefined;
+  }
+
+  const severity: Severity = decision.kind === "monitor" ? "monitor" : decision.severity;
+  const statusForText: CheckStatus = decision.kind === "monitor" ? "unknown" : decision.status;
+  const { title, summary } = describe(outcome.check_key, statusForText, outcome.detail);
+
+  if (open) {
+    // Een echt probleem wint van een monitor-incident, niet omgekeerd.
+    if (decision.kind === "monitor" && open.severity !== "monitor") return open;
+    const changed = open.severity !== severity;
+    await supabaseAdmin
+      .from("incidents")
+      .update({ severity, title, summary, detail: outcome.detail, last_seen_at: nowIso })
+      .eq("id", open.id);
+    if (changed) await addEvent(open.id, "severity", `${open.severity} → ${severity}: ${title}`);
+    let notified_at = open.notified_at;
+    if (changed && severity === "actie" && !open.notified_at && !isAcknowledged(open)) {
+      const m = incidentMail(target, title, summary, false);
+      const mailed = await sendAlertMail(m.subject, m.html);
+      if (mailed) {
+        notified_at = nowIso;
+        await supabaseAdmin.from("incidents").update({ notified_at }).eq("id", open.id);
+        await addEvent(open.id, "notified", "mail verstuurd");
+      }
+      await logAlert(target.id, outcome.check_key, `escalated:${severity}`, mailed, outcome.detail);
+    }
+    return { ...open, severity, title, notified_at };
+  }
+
+  const { data: created, error } = await supabaseAdmin
+    .from("incidents")
+    .insert({
+      target_id: target.id,
+      check_key: outcome.check_key,
+      severity,
+      title,
+      summary,
+      detail: outcome.detail,
+    })
+    .select("id, target_id, check_key, severity, status, title, acknowledged_until, notified_at")
+    .single();
+  if (error || !created) {
+    // unieke index: een parallelle run heeft het al geopend
+    console.error("incident insert", error?.message);
+    return open;
+  }
+  await addEvent(created.id, "opened", title);
+  let mailed = false;
+  if (severity === "actie") {
+    const m = incidentMail(target, title, summary, false);
+    mailed = await sendAlertMail(m.subject, m.html);
+    if (mailed) {
+      await supabaseAdmin.from("incidents").update({ notified_at: nowIso }).eq("id", created.id);
+      await addEvent(created.id, "notified", "mail verstuurd");
+    }
+  }
+  await logAlert(target.id, outcome.check_key, `opened:${severity}`, mailed, outcome.detail);
+  return created as Incident;
 }
 
 export async function runScans() {
-  const { data: targets, error } = await supabaseAdmin
-    .from("watch_targets")
-    .select("*")
-    .eq("enabled", true);
+  const [{ data: targets, error }, { data: recent, error: recentErr }, { data: openIncidents }] = await Promise.all([
+    supabaseAdmin.from("watch_targets").select("*").eq("enabled", true),
+    supabaseAdmin.rpc("wt_recent_results", { n: 5 }),
+    supabaseAdmin
+      .from("incidents")
+      .select("id, target_id, check_key, severity, status, title, acknowledged_until, notified_at")
+      .eq("status", "open"),
+  ]);
   if (error) throw error;
+  if (recentErr) throw recentErr;
 
-  const scanned: Array<{ target: string; status: CheckStatus; checks: number }> = [];
+  const historyByKey = new Map<string, RecentRow[]>();
+  for (const r of recent ?? []) {
+    const key = `${r.target_id}|${r.check_key}`;
+    const list = historyByKey.get(key) ?? [];
+    list.push({ check_key: r.check_key, status: r.status as CheckStatus, measured_at: r.measured_at, detail: r.detail });
+    historyByKey.set(key, list);
+  }
+  for (const list of historyByKey.values()) list.sort((a, b) => Date.parse(b.measured_at) - Date.parse(a.measured_at));
 
-  for (const target of targets ?? []) {
-    if (!isDue(target.frequency, target.last_scanned_at)) continue;
+  const openByKey = new Map<string, Incident>();
+  for (const inc of (openIncidents ?? []) as Incident[]) openByKey.set(`${inc.target_id}|${inc.check_key}`, inc);
 
-    const checks = (target.checks ?? {}) as Record<string, boolean>;
-    const outcomes: CheckOutcome[] = [];
+  const scanned: Array<{ target: string; status: CheckStatus; checks: string[] }> = [];
+  const now = Date.now();
 
-    if (checks.http !== false) outcomes.push(await checkHttp(target.url));
-    if (checks.ssl) outcomes.push(await checkSsl(target.url));
-    if (checks.dns) outcomes.push(await checkDns(target.url));
-    if (checks.form_smoke && target.form_smoke_url)
-      outcomes.push(await checkFormSmoke(target.form_smoke_url));
-    if (checks.health && target.health_url)
-      outcomes.push(await checkHealth(target.health_url, target.health_token));
-    if (!outcomes.length) continue;
+  for (const target of (targets ?? []) as Target[]) {
+    const keys = enabledChecks(target);
+    const due = keys.filter((k) => isCheckDue(k, target, historyByKey.get(`${target.id}|${k}`)?.[0]?.measured_at, now));
+    if (!due.length) continue;
 
-    // previous status per check_key (before inserting this run)
-    const previous = new Map<string, CheckStatus>();
-    for (const outcome of outcomes) {
-      const { data: prev } = await supabaseAdmin
-        .from("scan_results")
-        .select("status")
-        .eq("target_id", target.id)
-        .eq("check_key", outcome.check_key)
-        .order("measured_at", { ascending: false })
-        .limit(1)
-        .maybeSingle();
-      if (prev?.status) previous.set(outcome.check_key, prev.status as CheckStatus);
-    }
+    const outcomes = await Promise.all(due.map((k) => runCheck(target, k)));
+    const measuredAt = new Date().toISOString();
 
-    await supabaseAdmin.from("scan_results").insert(
+    const { error: insErr } = await supabaseAdmin.from("scan_results").insert(
       outcomes.map((o) => ({
         target_id: target.id,
         check_key: o.check_key,
         status: o.status,
         latency_ms: o.latency_ms,
         detail: o.detail,
+        measured_at: measuredAt,
       })),
     );
-
-    const overall = worstStatus(outcomes.map((o) => o.status));
-    await supabaseAdmin
-      .from("watch_targets")
-      .update({ status: overall, last_scanned_at: new Date().toISOString() })
-      .eq("id", target.id);
-
-    // alerting: only on transitions
-    for (const o of outcomes) {
-      const prev = previous.get(o.check_key);
-      if (!prev || prev === o.status) continue;
-      const recovered = o.status === "ok";
-      const subject = recovered
-        ? `[Watchtower] HERSTELD: ${target.name} — ${o.check_key}`
-        : `[Watchtower] ${o.status === "fail" ? "FAIL" : "WARN"}: ${target.name} — ${o.check_key}`;
-      const html = `<p><strong>${target.name}</strong> (${target.url})</p>
-        <p>Check: <code>${o.check_key}</code><br/>Overgang: <code>${prev} → ${o.status}</code></p>
-        <pre>${JSON.stringify(o.detail ?? {}, null, 2)}</pre>`;
-      const mailed = await sendAlertMail(subject, html);
-      await supabaseAdmin.from("alert_log").insert({
-        target_id: target.id,
-        check_key: o.check_key,
-        transition: `${prev}->${o.status}`,
-        mailed,
-        detail: o.detail,
-      });
+    if (insErr) {
+      console.error("scan_results insert", insErr.message);
+      continue;
     }
 
-    scanned.push({ target: target.name, status: overall, checks: outcomes.length });
+    for (const o of outcomes) {
+      const key = `${target.id}|${o.check_key}`;
+      const list = historyByKey.get(key) ?? [];
+      list.unshift({ check_key: o.check_key, status: o.status, measured_at: measuredAt, detail: o.detail });
+      historyByKey.set(key, list);
+      const after = await applyIncident(target, o, list.map((r) => r.status), openByKey.get(key));
+      if (after) openByKey.set(key, after);
+      else openByKey.delete(key);
+    }
+
+    const latest = keys
+      .map((k) => historyByKey.get(`${target.id}|${k}`)?.[0])
+      .filter((r): r is RecentRow => !!r);
+    const acked = new Set(keys.filter((k) => isAcknowledged(openByKey.get(`${target.id}|${k}`))));
+    const overall = targetStatus(latest, acked);
+
+    await supabaseAdmin
+      .from("watch_targets")
+      .update({ status: overall, last_scanned_at: measuredAt })
+      .eq("id", target.id);
+
+    scanned.push({ target: target.name, status: overall, checks: due });
   }
 
-  return { scanned_count: scanned.length, scanned };
+  return { engine: "v2", scanned_count: scanned.length, scanned };
 }
 
 export async function dailyRollup() {
@@ -442,45 +331,38 @@ export async function dailyRollup() {
     .from("scan_results")
     .select("target_id, check_key, status, latency_ms")
     .gte("measured_at", from)
-    .lte("measured_at", to);
+    .lte("measured_at", to)
+    .limit(20000);
   if (error) throw error;
 
-  const byTarget = new Map<string, typeof rows>();
+  const byTarget = new Map<string, NonNullable<typeof rows>>();
   for (const row of rows ?? []) {
     const list = byTarget.get(row.target_id) ?? [];
     list.push(row);
-    byTarget.set(row.target_id, list as typeof rows);
+    byTarget.set(row.target_id, list);
   }
 
   let written = 0;
-  for (const [targetId, list] of byTarget) {
-    const all = list ?? [];
-    const http = all.filter((r) => r.check_key === "http");
+  for (const [targetId, all] of byTarget) {
+    const http = all.filter((r) => r.check_key === "http" && r.status !== "unknown");
     const uptime = http.length
-      ? Math.round((http.filter((r) => r.status === "ok").length / http.length) * 10000) / 100
+      ? Math.round((http.filter((r) => r.status !== "fail").length / http.length) * 10000) / 100
       : null;
     const latencies = http.map((r) => r.latency_ms).filter((n): n is number => typeof n === "number");
-    const avgLatency = latencies.length
-      ? Math.round(latencies.reduce((a, b) => a + b, 0) / latencies.length)
-      : null;
+    const avgLatency = latencies.length ? Math.round(latencies.reduce((a, b) => a + b, 0) / latencies.length) : null;
     const failCount = all.filter((r) => r.status === "fail").length;
 
     await supabaseAdmin
       .from("daily_summaries")
       .upsert(
-        {
-          target_id: targetId,
-          day: dayStr,
-          uptime_pct: uptime,
-          avg_latency_ms: avgLatency,
-          fail_count: failCount,
-        },
+        { target_id: targetId, day: dayStr, uptime_pct: uptime, avg_latency_ms: avgLatency, fail_count: failCount },
         { onConflict: "target_id,day" },
       );
     written++;
   }
 
-  const cutoff = new Date(Date.now() - 90 * 86400000).toISOString();
+  // Ruwe metingen 30 dagen bewaren (bij 10-min-cadans); dagoverzichten blijven.
+  const cutoff = new Date(Date.now() - 30 * 86400000).toISOString();
   await supabaseAdmin.from("scan_results").delete().lt("measured_at", cutoff);
 
   return { day: dayStr, summaries_written: written };

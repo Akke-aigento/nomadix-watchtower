@@ -87,6 +87,100 @@ export type Database = {
           },
         ]
       }
+      incident_events: {
+        Row: {
+          created_at: string
+          id: string
+          incident_id: string
+          kind: string
+          message: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          incident_id: string
+          kind: string
+          message: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          incident_id?: string
+          kind?: string
+          message?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "incident_events_incident_id_fkey"
+            columns: ["incident_id"]
+            isOneToOne: false
+            referencedRelation: "incidents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      incidents: {
+        Row: {
+          acknowledged_note: string | null
+          acknowledged_until: string | null
+          check_key: string
+          detail: Json | null
+          id: string
+          last_reminder_at: string | null
+          last_seen_at: string
+          notified_at: string | null
+          opened_at: string
+          resolved_at: string | null
+          severity: string
+          status: string
+          summary: string | null
+          target_id: string
+          title: string
+        }
+        Insert: {
+          acknowledged_note?: string | null
+          acknowledged_until?: string | null
+          check_key: string
+          detail?: Json | null
+          id?: string
+          last_reminder_at?: string | null
+          last_seen_at?: string
+          notified_at?: string | null
+          opened_at?: string
+          resolved_at?: string | null
+          severity: string
+          status?: string
+          summary?: string | null
+          target_id: string
+          title: string
+        }
+        Update: {
+          acknowledged_note?: string | null
+          acknowledged_until?: string | null
+          check_key?: string
+          detail?: Json | null
+          id?: string
+          last_reminder_at?: string | null
+          last_seen_at?: string
+          notified_at?: string | null
+          opened_at?: string
+          resolved_at?: string | null
+          severity?: string
+          status?: string
+          summary?: string | null
+          target_id?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "incidents_target_id_fkey"
+            columns: ["target_id"]
+            isOneToOne: false
+            referencedRelation: "watch_targets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       proposals: {
         Row: {
           category: string
@@ -233,6 +327,19 @@ export type Database = {
     Functions: {
       get_cron_secret: { Args: never; Returns: string }
       get_heartbeat_url: { Args: never; Returns: string }
+      is_watchtower_admin: { Args: never; Returns: boolean }
+      wt_recent_results: {
+        Args: { n?: number }
+        Returns: {
+          check_key: string
+          detail: Json
+          latency_ms: number
+          measured_at: string
+          rn: number
+          status: string
+          target_id: string
+        }[]
+      }
     }
     Enums: {
       [_ in never]: never
