@@ -22,6 +22,7 @@ import {
   type CheckStatus,
 } from "@/lib/checks.server";
 import { checkName, decide, describe, isCheckDue, targetStatus, type Severity } from "@/lib/policy";
+import { anyDelivered, pushToAll } from "@/lib/notify.server";
 
 export type { CheckOutcome, CheckStatus } from "@/lib/checks.server";
 
@@ -139,6 +140,70 @@ function incidentMail(target: Target, title: string, summary: string, recovered:
   return { subject, html };
 }
 
+/** Actie-melding: mail + push tegelijk. Geeft terug of minstens één kanaal aankwam. */
+async function notifyIncident(
+  target: Target,
+  incidentId: string,
+  kind: "open" | "resolved",
+  title: string,
+  summary: string,
+): Promise<{ mailed: boolean; pushed: boolean }> {
+  const m = incidentMail(target, title, kind === "resolved" ? "Terug in orde." : summary, kind === "resolved");
+  const [mailed, pushResults] = await Promise.all([
+    sendAlertMail(m.subject, m.html),
+    pushToAll(
+      {
+        title: kind === "resolved" ? `Opgelost · ${target.name}` : `Actie · ${target.name}`,
+        body: kind === "resolved" ? `${title} — terug in orde.` : summary ? `${title}. ${summary}` : title,
+        url: `/target/${target.id}`,
+        tag: incidentId,
+        severity: kind === "resolved" ? "ok" : "actie",
+      },
+      kind === "resolved" ? "normal" : "high",
+    ),
+  ]);
+  const pushed = anyDelivered(pushResults);
+  await addEvent(
+    incidentId,
+    "notified",
+    `${kind === "resolved" ? "hersteld gemeld" : "actie gemeld"}: mail ${mailed ? "ok" : "mislukt"}, push ${pushResults.length ? (pushed ? "ok" : "mislukt") : "geen toestel"}`,
+  );
+  return { mailed, pushed };
+}
+
+/** Herinneringen voor open, niet-erkende actie-incidenten: elke 30 min de eerste 2 uur, daarna elke 4 uur. */
+async function sendReminders(targetsById: Map<string, Target>) {
+  const { data: open } = await supabaseAdmin
+    .from("incidents")
+    .select("id, target_id, title, summary, opened_at, notified_at, last_reminder_at, acknowledged_until")
+    .eq("status", "open")
+    .eq("severity", "actie")
+    .not("notified_at", "is", null);
+  const now = Date.now();
+  let sent = 0;
+  for (const inc of open ?? []) {
+    if (isAcknowledged(inc, now)) continue;
+    const target = targetsById.get(inc.target_id);
+    if (!target) continue;
+    const last = Date.parse(inc.last_reminder_at ?? inc.notified_at!);
+    const ageMs = now - Date.parse(inc.opened_at);
+    const interval = ageMs < 2 * 3600_000 ? 30 * 60_000 : 4 * 3600_000;
+    if (now - last < interval - 60_000) continue;
+    const hours = Math.max(1, Math.round(ageMs / 3600_000));
+    const results = await pushToAll({
+      title: `Nog open · ${target.name}`,
+      body: `${inc.title} — al ${ageMs < 3600_000 ? `${Math.round(ageMs / 60_000)} min` : `${hours} u`}. Erken het om de herinneringen te stoppen.`,
+      url: `/target/${target.id}`,
+      tag: inc.id,
+      severity: "actie",
+    });
+    await supabaseAdmin.from("incidents").update({ last_reminder_at: new Date().toISOString() }).eq("id", inc.id);
+    await addEvent(inc.id, "reminder", `herinnering: push ${results.length ? (anyDelivered(results) ? "ok" : "mislukt") : "geen toestel"}`);
+    sent++;
+  }
+  return sent;
+}
+
 async function logAlert(targetId: string, checkKey: string, transition: string, mailed: boolean, detail: Json) {
   await supabaseAdmin.from("alert_log").insert({ target_id: targetId, check_key: checkKey, transition, mailed, detail });
 }
@@ -178,8 +243,7 @@ async function applyIncident(
     await addEvent(open.id, "resolved", `${checkName(outcome.check_key)} terug in orde`);
     let mailed = false;
     if (open.severity === "actie" && open.notified_at) {
-      const m = incidentMail(target, open.title, "Terug in orde.", true);
-      mailed = await sendAlertMail(m.subject, m.html);
+      mailed = (await notifyIncident(target, open.id, "resolved", open.title, "")).mailed;
     }
     await logAlert(target.id, outcome.check_key, `resolved:${open.severity}`, mailed, outcome.detail);
     return undefined;
@@ -200,12 +264,10 @@ async function applyIncident(
     if (changed) await addEvent(open.id, "severity", `${open.severity} → ${severity}: ${title}`);
     let notified_at = open.notified_at;
     if (changed && severity === "actie" && !open.notified_at && !isAcknowledged(open)) {
-      const m = incidentMail(target, title, summary, false);
-      const mailed = await sendAlertMail(m.subject, m.html);
-      if (mailed) {
+      const { mailed, pushed } = await notifyIncident(target, open.id, "open", title, summary);
+      if (mailed || pushed) {
         notified_at = nowIso;
         await supabaseAdmin.from("incidents").update({ notified_at }).eq("id", open.id);
-        await addEvent(open.id, "notified", "mail verstuurd");
       }
       await logAlert(target.id, outcome.check_key, `escalated:${severity}`, mailed, outcome.detail);
     }
@@ -232,11 +294,10 @@ async function applyIncident(
   await addEvent(created.id, "opened", title);
   let mailed = false;
   if (severity === "actie") {
-    const m = incidentMail(target, title, summary, false);
-    mailed = await sendAlertMail(m.subject, m.html);
-    if (mailed) {
+    const res = await notifyIncident(target, created.id, "open", title, summary);
+    mailed = res.mailed;
+    if (res.mailed || res.pushed) {
       await supabaseAdmin.from("incidents").update({ notified_at: nowIso }).eq("id", created.id);
-      await addEvent(created.id, "notified", "mail verstuurd");
     }
   }
   await logAlert(target.id, outcome.check_key, `opened:${severity}`, mailed, outcome.detail);
@@ -317,7 +378,9 @@ export async function runScans() {
     scanned.push({ target: target.name, status: overall, checks: due });
   }
 
-  return { engine: "v2", scanned_count: scanned.length, scanned };
+  const reminders = await sendReminders(new Map(((targets ?? []) as Target[]).map((t) => [t.id, t])));
+
+  return { engine: "v2", scanned_count: scanned.length, reminders, scanned };
 }
 
 export async function dailyRollup() {

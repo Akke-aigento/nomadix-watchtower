@@ -17,7 +17,8 @@ async function handle(request: Request) {
   }
   try {
     const { morningBrief } = await import("@/lib/morning-brief.server");
-    const result = await morningBrief();
+    const dryRun = new URL(request.url).searchParams.get("dry") === "1";
+    const result = await morningBrief({ dryRun });
     if (result.sent) await pingHeartbeat();
     return Response.json(result);
   } catch (e) {

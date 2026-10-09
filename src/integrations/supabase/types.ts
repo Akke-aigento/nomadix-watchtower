@@ -181,6 +181,48 @@ export type Database = {
           },
         ]
       }
+      watchtower_admins: {
+        Row: { created_at: string; user_id: string }
+        Insert: { created_at?: string; user_id: string }
+        Update: { created_at?: string; user_id?: string }
+        Relationships: []
+      }
+      push_subscriptions: {
+        Row: {
+          auth: string
+          created_at: string
+          endpoint: string
+          failure_count: number
+          id: string
+          last_success_at: string | null
+          p256dh: string
+          user_agent: string | null
+          user_id: string | null
+        }
+        Insert: {
+          auth: string
+          created_at?: string
+          endpoint: string
+          failure_count?: number
+          id?: string
+          last_success_at?: string | null
+          p256dh: string
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          auth?: string
+          created_at?: string
+          endpoint?: string
+          failure_count?: number
+          id?: string
+          last_success_at?: string | null
+          p256dh?: string
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       proposals: {
         Row: {
           category: string
@@ -327,6 +369,7 @@ export type Database = {
     Functions: {
       get_cron_secret: { Args: never; Returns: string }
       get_heartbeat_url: { Args: never; Returns: string }
+      get_vapid_private_jwk: { Args: never; Returns: string }
       is_watchtower_admin: { Args: never; Returns: boolean }
       wt_recent_results: {
         Args: { n?: number }

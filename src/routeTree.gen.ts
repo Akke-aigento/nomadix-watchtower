@@ -14,12 +14,14 @@ import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as AuthenticatedAlertsRouteImport } from './routes/_authenticated/alerts'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
+import { Route as AuthenticatedMeldingenRouteImport } from './routes/_authenticated/meldingen'
 import { Route as AuthenticatedProposalsRouteImport } from './routes/_authenticated/proposals'
 import { Route as AuthenticatedTargetIdRouteImport } from './routes/_authenticated/target.$id'
 import { Route as AuthenticatedTargetsNewRouteImport } from './routes/_authenticated/targets/new'
 import { Route as ApiPublicDailyRollupRouteImport } from './routes/api/public/daily-rollup'
 import { Route as ApiPublicMorningBriefRouteImport } from './routes/api/public/morning-brief'
 import { Route as ApiPublicRunScansRouteImport } from './routes/api/public/run-scans'
+import { Route as ApiPushTestRouteImport } from './routes/api/push/test'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -43,6 +45,11 @@ const AuthenticatedAlertsRoute = AuthenticatedAlertsRouteImport.update({
 const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedMeldingenRoute = AuthenticatedMeldingenRouteImport.update({
+  id: '/meldingen',
+  path: '/meldingen',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedProposalsRoute = AuthenticatedProposalsRouteImport.update({
@@ -75,30 +82,39 @@ const ApiPublicRunScansRoute = ApiPublicRunScansRouteImport.update({
   path: '/api/public/run-scans',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPushTestRoute = ApiPushTestRouteImport.update({
+  id: '/api/push/test',
+  path: '/api/push/test',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
   '/alerts': typeof AuthenticatedAlertsRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
+  '/meldingen': typeof AuthenticatedMeldingenRoute
   '/proposals': typeof AuthenticatedProposalsRoute
   '/target/$id': typeof AuthenticatedTargetIdRoute
   '/targets/new': typeof AuthenticatedTargetsNewRoute
   '/api/public/daily-rollup': typeof ApiPublicDailyRollupRoute
   '/api/public/morning-brief': typeof ApiPublicMorningBriefRoute
   '/api/public/run-scans': typeof ApiPublicRunScansRoute
+  '/api/push/test': typeof ApiPushTestRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
   '/alerts': typeof AuthenticatedAlertsRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
+  '/meldingen': typeof AuthenticatedMeldingenRoute
   '/proposals': typeof AuthenticatedProposalsRoute
   '/target/$id': typeof AuthenticatedTargetIdRoute
   '/targets/new': typeof AuthenticatedTargetsNewRoute
   '/api/public/daily-rollup': typeof ApiPublicDailyRollupRoute
   '/api/public/morning-brief': typeof ApiPublicMorningBriefRoute
   '/api/public/run-scans': typeof ApiPublicRunScansRoute
+  '/api/push/test': typeof ApiPushTestRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -107,12 +123,14 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/_authenticated/alerts': typeof AuthenticatedAlertsRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
+  '/_authenticated/meldingen': typeof AuthenticatedMeldingenRoute
   '/_authenticated/proposals': typeof AuthenticatedProposalsRoute
   '/_authenticated/target/$id': typeof AuthenticatedTargetIdRoute
   '/_authenticated/targets/new': typeof AuthenticatedTargetsNewRoute
   '/api/public/daily-rollup': typeof ApiPublicDailyRollupRoute
   '/api/public/morning-brief': typeof ApiPublicMorningBriefRoute
   '/api/public/run-scans': typeof ApiPublicRunScansRoute
+  '/api/push/test': typeof ApiPushTestRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -121,24 +139,28 @@ export interface FileRouteTypes {
     | '/login'
     | '/alerts'
     | '/dashboard'
+    | '/meldingen'
     | '/proposals'
     | '/target/$id'
     | '/targets/new'
     | '/api/public/daily-rollup'
     | '/api/public/morning-brief'
     | '/api/public/run-scans'
+    | '/api/push/test'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/login'
     | '/alerts'
     | '/dashboard'
+    | '/meldingen'
     | '/proposals'
     | '/target/$id'
     | '/targets/new'
     | '/api/public/daily-rollup'
     | '/api/public/morning-brief'
     | '/api/public/run-scans'
+    | '/api/push/test'
   id:
     | '__root__'
     | '/'
@@ -146,12 +168,14 @@ export interface FileRouteTypes {
     | '/login'
     | '/_authenticated/alerts'
     | '/_authenticated/dashboard'
+    | '/_authenticated/meldingen'
     | '/_authenticated/proposals'
     | '/_authenticated/target/$id'
     | '/_authenticated/targets/new'
     | '/api/public/daily-rollup'
     | '/api/public/morning-brief'
     | '/api/public/run-scans'
+    | '/api/push/test'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -161,6 +185,7 @@ export interface RootRouteChildren {
   ApiPublicDailyRollupRoute: typeof ApiPublicDailyRollupRoute
   ApiPublicMorningBriefRoute: typeof ApiPublicMorningBriefRoute
   ApiPublicRunScansRoute: typeof ApiPublicRunScansRoute
+  ApiPushTestRoute: typeof ApiPushTestRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -198,6 +223,13 @@ declare module '@tanstack/react-router' {
       path: '/dashboard'
       fullPath: '/dashboard'
       preLoaderRoute: typeof AuthenticatedDashboardRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/meldingen': {
+      id: '/_authenticated/meldingen'
+      path: '/meldingen'
+      fullPath: '/meldingen'
+      preLoaderRoute: typeof AuthenticatedMeldingenRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/proposals': {
@@ -242,12 +274,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicRunScansRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/push/test': {
+      id: '/api/push/test'
+      path: '/api/push/test'
+      fullPath: '/api/push/test'
+      preLoaderRoute: typeof ApiPushTestRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedAlertsRoute: typeof AuthenticatedAlertsRoute
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
+  AuthenticatedMeldingenRoute: typeof AuthenticatedMeldingenRoute
   AuthenticatedProposalsRoute: typeof AuthenticatedProposalsRoute
   AuthenticatedTargetIdRoute: typeof AuthenticatedTargetIdRoute
   AuthenticatedTargetsNewRoute: typeof AuthenticatedTargetsNewRoute
@@ -256,6 +296,7 @@ interface AuthenticatedRouteRouteChildren {
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAlertsRoute: AuthenticatedAlertsRoute,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
+  AuthenticatedMeldingenRoute: AuthenticatedMeldingenRoute,
   AuthenticatedProposalsRoute: AuthenticatedProposalsRoute,
   AuthenticatedTargetIdRoute: AuthenticatedTargetIdRoute,
   AuthenticatedTargetsNewRoute: AuthenticatedTargetsNewRoute,
@@ -271,7 +312,18 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicDailyRollupRoute: ApiPublicDailyRollupRoute,
   ApiPublicMorningBriefRoute: ApiPublicMorningBriefRoute,
   ApiPublicRunScansRoute: ApiPublicRunScansRoute,
+  ApiPushTestRoute: ApiPushTestRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}

@@ -1,19 +1,25 @@
-/** Ochtendbrief: één compacte HTML-mail met de stand van zaken (server-only). */
+/**
+ * Ochtendbrief (server-only). Eén vraag: moet ik vandaag iets doen?
+ *
+ * Onderwerp vertelt het al: "Rustig · …", "Aandacht · …" of "Actie · …".
+ * Blokken (lege blokken verdwijnen): Actie, Aandacht, Sinds gisteren,
+ * Komt eraan, Wacht op jouw go, Rustig, en een voetregel met Erkend + Zelfcontrole.
+ */
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { sendAlertMail } from "@/lib/scan.server";
 
-const BG = "#0b0f14";
-const PANEL = "#121820";
-const BORDER = "#1f2a36";
-const TEXT = "#e6edf3";
-const MUTED = "#8b98a5";
-const OK = "#3fb950";
-const WARN = "#d29922";
-const FAIL = "#f85149";
-
-function statusColor(status: string): string {
-  return status === "ok" ? OK : status === "warn" ? WARN : status === "fail" ? FAIL : MUTED;
-}
+const DASHBOARD_URL = "https://nomadix-watchtower.lovable.app";
+const C = {
+  bg: "#ECE9E3",
+  card: "#FFFFFF",
+  text: "#17191A",
+  body: "#2A2D2F",
+  muted: "#5C6266",
+  actie: "#C8402B",
+  actieText: "#A8341F",
+  aandacht: "#8A5A00",
+  rustig: "#1F7A63",
+};
 
 function esc(value: unknown): string {
   return String(value ?? "")
@@ -22,189 +28,218 @@ function esc(value: unknown): string {
     .replace(/>/g, "&gt;");
 }
 
-function reasonOf(detail: unknown): string {
-  if (!detail || typeof detail !== "object") return "geen detail";
-  const d = detail as Record<string, unknown>;
-  if (typeof d.error === "string") return d.error;
-  if (typeof d.note === "string") return d.note;
-  if (typeof d.http_status === "number") return `HTTP ${d.http_status}`;
-  if (typeof d.days_left === "number") return `${d.days_left} dagen geldig`;
-  if (d.spf === false || d.dmarc === false)
-    return `SPF ${d.spf ? "ok" : "ontbreekt"}, DMARC ${d.dmarc ? "ok" : "ontbreekt"}`;
-  return JSON.stringify(d).slice(0, 160);
+function brusselsDate(d: Date, opts: Intl.DateTimeFormatOptions): string {
+  return d.toLocaleDateString("nl-BE", { timeZone: "Europe/Brussels", ...opts });
 }
 
-function fmtTime(iso: string): string {
-  return new Date(iso).toLocaleString("nl-BE", {
-    day: "2-digit",
-    month: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    timeZone: "Europe/Brussels",
-  });
+function since(iso: string): string {
+  const ms = Date.now() - Date.parse(iso);
+  const h = Math.round(ms / 3600000);
+  if (h < 1) return "net";
+  if (h < 48) return `${h} u`;
+  return `${Math.round(h / 24)} dagen`;
 }
 
-function section(title: string, inner: string): string {
-  return `<div style="background:${PANEL};border:1px solid ${BORDER};border-radius:8px;padding:14px 16px;margin:0 0 12px 0">
-    <div style="font:600 11px/1.4 ui-monospace,Menlo,Consolas,monospace;letter-spacing:.08em;text-transform:uppercase;color:${MUTED};margin-bottom:10px">${esc(title)}</div>
-    ${inner}
-  </div>`;
+function card(inner: string, extra = ""): string {
+  return `<div style="background:${C.card};border-radius:14px;padding:22px 26px;margin:0 0 14px 0;${extra}">${inner}</div>`;
 }
 
-export async function morningBrief(): Promise<{ sent: boolean; sections: string[] }> {
-  const now = Date.now();
-  const since = new Date(now - 24 * 3600000).toISOString();
+function label(text: string, color = C.muted): string {
+  return `<div style="font:600 12px/1.4 Arial,sans-serif;letter-spacing:.08em;text-transform:uppercase;color:${color};margin:0 0 12px 0">${esc(text)}</div>`;
+}
 
-  const [{ data: targets }, { data: alerts }, { data: proposals }] = await Promise.all([
-    supabaseAdmin.from("watch_targets").select("*").eq("enabled", true).order("name"),
-    supabaseAdmin
-      .from("alert_log")
-      .select("*")
-      .gte("created_at", since)
-      .order("created_at", { ascending: false }),
-    supabaseAdmin
-      .from("proposals")
-      .select("*")
-      .eq("status", "proposed")
-      .order("created_at", { ascending: false }),
-  ]);
+function button(href: string, text: string, dark = true): string {
+  return `<a href="${href}" style="display:inline-block;background:${dark ? C.text : "#E7E4DE"};color:${dark ? "#F5F3EF" : C.text};text-decoration:none;font:600 14px/1 Arial,sans-serif;padding:12px 18px;border-radius:10px;margin-right:8px">${esc(text)}</a>`;
+}
+
+type IncidentRow = {
+  id: string;
+  target_id: string;
+  check_key: string;
+  severity: string;
+  status: string;
+  title: string;
+  summary: string | null;
+  opened_at: string;
+  resolved_at: string | null;
+  acknowledged_until: string | null;
+  acknowledged_note: string | null;
+};
+
+export async function morningBrief(opts: { dryRun?: boolean } = {}): Promise<{
+  sent: boolean;
+  subject: string;
+  sections: string[];
+  html?: string;
+}> {
+  const now = new Date();
+  const dayAgo = new Date(now.getTime() - 24 * 3600000).toISOString();
+
+  const [{ data: targets }, { data: openInc }, { data: recentInc }, { data: proposals }, { data: ssl }, { count: unknownCount }] =
+    await Promise.all([
+      supabaseAdmin.from("watch_targets").select("id, name, kind, status").eq("enabled", true).order("name"),
+      supabaseAdmin.from("incidents").select("*").eq("status", "open").order("opened_at"),
+      supabaseAdmin
+        .from("incidents")
+        .select("*")
+        .or(`opened_at.gte.${dayAgo},resolved_at.gte.${dayAgo}`)
+        .neq("severity", "monitor"),
+      supabaseAdmin.from("proposals").select("id, title, category, created_at").eq("status", "proposed"),
+      supabaseAdmin.rpc("wt_recent_results", { n: 1 }),
+      supabaseAdmin.from("scan_results").select("id", { count: "exact", head: true }).eq("status", "unknown").gte("measured_at", dayAgo),
+    ]);
 
   const list = targets ?? [];
-  const targetById = new Map(list.map((t) => [t.id, t]));
+  const nameOf = new Map(list.map((t) => [t.id, t.name]));
+  const isAcked = (i: IncidentRow) => !!i.acknowledged_until && Date.parse(i.acknowledged_until) > now.getTime();
+  const open = (openInc ?? []) as IncidentRow[];
+  const actie = open.filter((i) => i.severity === "actie" && !isAcked(i));
+  const aandacht = open.filter((i) => i.severity === "aandacht" && !isAcked(i));
+  const monitor = open.filter((i) => i.severity === "monitor");
+  const acked = open.filter((i) => isAcked(i));
+  const troubled = new Set([...actie, ...aandacht].map((i) => i.target_id));
 
-  const { data: recent } = await supabaseAdmin
-    .from("scan_results")
-    .select("target_id, check_key, status, latency_ms, detail, measured_at")
-    .order("measured_at", { ascending: false })
-    .limit(1500);
-
-  // laatste resultaat per target+check
-  const latest = new Map<string, NonNullable<typeof recent>[number]>();
-  for (const row of recent ?? []) {
-    const key = `${row.target_id}|${row.check_key}`;
-    if (!latest.has(key)) latest.set(key, row);
-  }
-
-  const sections: string[] = [];
   const blocks: string[] = [];
+  const sections: string[] = [];
+  const dateLong = brusselsDate(now, { weekday: "long", day: "numeric", month: "long" });
+  const dateShort = brusselsDate(now, { weekday: "short", day: "numeric", month: "short" });
 
-  // 1. statusbalk
-  const counts = { ok: 0, warn: 0, fail: 0, unknown: 0 } as Record<string, number>;
-  for (const t of list) counts[t.status in counts ? t.status : "unknown"]++;
-  const problemLines: string[] = [];
-  for (const t of list) {
-    if (t.status !== "warn" && t.status !== "fail") continue;
-    const rows = [...latest.values()].filter(
-      (r) => r.target_id === t.id && (r.status === "warn" || r.status === "fail"),
-    );
-    if (rows.length === 0) {
-      problemLines.push(
-        `<div style="font:400 13px/1.6 Arial,sans-serif;color:${TEXT}"><span style="color:${statusColor(t.status)}">●</span> ${esc(t.name)} — <span style="color:${MUTED}">status ${esc(t.status)}</span></div>`,
-      );
-      continue;
-    }
-    for (const r of rows) {
-      problemLines.push(
-        `<div style="font:400 13px/1.6 Arial,sans-serif;color:${TEXT}"><span style="color:${statusColor(r.status)}">●</span> ${esc(t.name)} — ${esc(r.check_key)} — <span style="color:${MUTED}">${esc(reasonOf(r.detail))}</span></div>`,
-      );
-    }
-  }
+  // Kop
+  const level = actie.length ? "actie" : aandacht.length ? "aandacht" : "rustig";
+  const levelColor = level === "actie" ? C.actie : level === "aandacht" ? C.aandacht : C.rustig;
+  const headline =
+    level === "actie"
+      ? `${actie.length === 1 ? "1 ding vraagt" : `${actie.length} dingen vragen`} actie.`
+      : level === "aandacht"
+        ? `${aandacht.length === 1 ? "1 ding vraagt" : `${aandacht.length} dingen vragen`} aandacht.`
+        : "Alles rustig.";
+  const sub = level === "rustig"
+    ? `${list.length} properties, alle beloftes gehouden.`
+    : `${list.length - troubled.size} van de ${list.length} properties zijn rustig.`;
   blocks.push(
-    section(
-      "Status",
-      `<div style="font:600 15px/1.5 Arial,sans-serif;color:${TEXT}">
-        <span style="color:${OK}">${counts.ok} ok</span> ·
-        <span style="color:${WARN}">${counts.warn} warn</span> ·
-        <span style="color:${FAIL}">${counts.fail} fail</span>
-      </div>${problemLines.length ? `<div style="margin-top:8px">${problemLines.join("")}</div>` : ""}`,
+    card(
+      `<div style="font:600 12px/1.4 Arial,sans-serif;letter-spacing:.08em;text-transform:uppercase;color:${levelColor};margin-bottom:12px">● ${level === "actie" ? "Actie" : level === "aandacht" ? "Aandacht" : "Rustig"}</div>
+       <div style="font:600 30px/1.15 Arial,sans-serif;color:${C.text}">${esc(headline)}</div>
+       <div style="font:400 16px/1.5 Arial,sans-serif;color:#3E4447;margin-top:8px">${esc(sub)}</div>`,
     ),
   );
-  sections.push("status");
+  sections.push("kop");
 
-  // 2. transities 24u
-  if ((alerts ?? []).length > 0) {
-    const rows = (alerts ?? [])
-      .map((a) => {
-        const t = targetById.get(a.target_id);
-        const to = a.transition.split("->").at(-1) ?? "unknown";
-        return `<div style="font:400 13px/1.6 Arial,sans-serif;color:${TEXT}"><span style="color:${statusColor(to)}">●</span> ${esc(t?.name ?? "onbekend target")} — ${esc(a.check_key)} — <span style="font-family:ui-monospace,Menlo,Consolas,monospace">${esc(a.transition)}</span> <span style="color:${MUTED}">${esc(fmtTime(a.created_at))}</span></div>`;
-      })
-      .join("");
-    blocks.push(section("Transities laatste 24u", rows));
-    sections.push("transitions");
-  }
-
-  // 3. openstaande proposals
-  if ((proposals ?? []).length > 0) {
-    const rows = (proposals ?? [])
-      .map(
-        (p) =>
-          `<div style="font:400 13px/1.6 Arial,sans-serif;color:${TEXT};margin-bottom:4px"><span style="display:inline-block;border:1px solid ${BORDER};border-radius:4px;padding:1px 6px;font:600 10px/1.4 ui-monospace,Menlo,Consolas,monospace;text-transform:uppercase;color:${MUTED};margin-right:6px">${esc(p.category)}</span>${esc(p.title)}</div>`,
-      )
-      .join("");
-    blocks.push(section("Wachten op jouw go", rows));
-    sections.push("proposals");
-  }
-
-  // 4. health-samenvattingen
-  const healthTargets = list.filter(
-    (t) => !!(t.checks as Record<string, boolean> | null)?.health && !!t.health_url,
-  );
-  const healthBlocks: string[] = [];
-  for (const t of healthTargets) {
-    const row = latest.get(`${t.id}|health`);
-    if (!row) continue;
-    const detail = (row.detail ?? {}) as Record<string, unknown>;
-    const checks = Array.isArray(detail.checks) ? (detail.checks as unknown[]) : [];
-    const lines = checks
-      .map((c) => {
-        const o = (c ?? {}) as Record<string, unknown>;
-        const label = esc(o.name ?? o.check ?? o.key ?? "check");
-        const st = String(o.status ?? "unknown");
-        const extra = o.message ?? o.detail ?? o.error;
-        return `<div style="font:400 12px/1.6 Arial,sans-serif;color:${TEXT};padding-left:12px"><span style="color:${statusColor(st)}">●</span> ${label}${extra ? ` — <span style="color:${MUTED}">${esc(extra)}</span>` : ""}</div>`;
-      })
-      .join("");
-    healthBlocks.push(
-      `<div style="margin-bottom:8px"><div style="font:600 13px/1.6 Arial,sans-serif;color:${TEXT}"><span style="color:${statusColor(row.status)}">●</span> ${esc(t.name)} — ${esc(row.status)}</div>${lines}</div>`,
+  // Actie
+  for (const i of actie) {
+    blocks.push(
+      card(
+        `<div style="font:600 13px/1.4 Arial,sans-serif;color:${C.actieText};margin-bottom:6px">ACTIE · open sinds ${esc(since(i.opened_at))}</div>
+         <div style="font:600 18px/1.3 Arial,sans-serif;color:${C.text}">${esc(nameOf.get(i.target_id) ?? "")} — ${esc(i.title)}</div>
+         ${i.summary ? `<div style="font:400 15px/1.5 Arial,sans-serif;color:${C.body};margin-top:6px">${esc(i.summary)}</div>` : ""}
+         <div style="margin-top:16px">${button(`${DASHBOARD_URL}/target/${i.target_id}`, "Bekijk")}</div>`,
+        `border-top:4px solid ${C.actie};`,
+      ),
     );
   }
-  if (healthBlocks.length > 0) {
-    blocks.push(section("Health", healthBlocks.join("")));
-    sections.push("health");
-  }
+  if (actie.length) sections.push("actie");
 
-  // 5. traagste 3 op laatste http-latency
-  const slow = list
-    .map((t) => ({ t, row: latest.get(`${t.id}|http`) }))
-    .filter((x): x is { t: (typeof list)[number]; row: NonNullable<typeof x.row> } =>
-      typeof x.row?.latency_ms === "number",
-    )
-    .sort((a, b) => (b.row.latency_ms ?? 0) - (a.row.latency_ms ?? 0))
-    .slice(0, 3);
-  if (slow.length > 0) {
-    const rows = slow
+  // Aandacht
+  if (aandacht.length) {
+    const rows = aandacht
       .map(
-        ({ t, row }) =>
-          `<div style="font:400 13px/1.6 Arial,sans-serif;color:${TEXT}">${esc(t.name)} — <span style="font-family:ui-monospace,Menlo,Consolas,monospace;color:${MUTED}">${row.latency_ms} ms</span></div>`,
+        (i) => `<div style="margin:0 0 12px 0">
+          <div style="font:600 15px/1.4 Arial,sans-serif;color:${C.text}">${esc(nameOf.get(i.target_id) ?? "")} — ${esc(i.title)}</div>
+          ${i.summary ? `<div style="font:400 14px/1.5 Arial,sans-serif;color:${C.body}">${esc(i.summary)}</div>` : ""}
+        </div>`,
       )
       .join("");
-    blocks.push(section("Traagste 3", rows));
-    sections.push("slowest");
+    blocks.push(card(label("Aandacht · kan wachten", C.aandacht) + rows));
+    sections.push("aandacht");
   }
 
-  const today = new Date();
-  const dd = String(today.getUTCDate()).padStart(2, "0");
-  const mm = String(today.getUTCMonth() + 1).padStart(2, "0");
-  const subject = `[Watchtower] Ochtendbrief — ${dd}-${mm}-${today.getUTCFullYear()}`;
+  // Sinds gisteren
+  const recent = (recentInc ?? []) as IncidentRow[];
+  const resolved = recent.filter((i) => i.status === "resolved" && i.resolved_at && i.resolved_at >= dayAgo);
+  const opened = recent.filter((i) => i.opened_at >= dayAgo);
+  if (resolved.length || opened.length) {
+    const line = (tag: string, color: string, i: IncidentRow) =>
+      `<div style="font:400 15px/1.5 Arial,sans-serif;color:${C.body};margin-bottom:6px"><span style="display:inline-block;width:78px;font-weight:600;color:${color}">${tag}</span>${esc(nameOf.get(i.target_id) ?? "")} · ${esc(i.title)}</div>`;
+    blocks.push(
+      card(
+        label("Sinds gisteren") +
+          resolved.map((i) => line("Opgelost", C.rustig, i)).join("") +
+          opened.map((i) => line("Nieuw", i.severity === "actie" ? C.actieText : C.aandacht, i)).join(""),
+      ),
+    );
+    sections.push("sinds_gisteren");
+  }
 
-  const html = `<div style="background:${BG};padding:20px;font-family:Arial,sans-serif">
-    <div style="max-width:640px;margin:0 auto">
-      <div style="font:700 16px/1.4 Arial,sans-serif;color:${TEXT};margin-bottom:14px">Nomadix Watchtower — ochtendbrief ${dd}-${mm}-${today.getUTCFullYear()}</div>
-      ${blocks.join("")}
-    </div>
-  </div>`;
+  // Komt eraan: certificaten die binnen 30 dagen verlopen
+  const upcoming = (ssl ?? [])
+    .filter((r) => r.check_key === "ssl")
+    .map((r) => ({ r, d: (r.detail ?? {}) as { days_left?: number; host?: string } }))
+    .filter((x) => typeof x.d.days_left === "number" && x.d.days_left >= 0 && x.d.days_left <= 30)
+    .sort((a, b) => (a.d.days_left ?? 0) - (b.d.days_left ?? 0));
+  if (upcoming.length) {
+    blocks.push(
+      card(
+        label("Komt eraan") +
+          upcoming
+            .map(
+              (x) =>
+                `<div style="font:400 15px/1.5 Arial,sans-serif;color:${C.body};margin-bottom:6px"><span style="display:inline-block;width:78px;font-family:ui-monospace,Menlo,Consolas,monospace;color:${C.muted}">${x.d.days_left} d</span>Certificaat ${esc(x.d.host ?? nameOf.get(x.r.target_id) ?? "")}</div>`,
+            )
+            .join(""),
+      ),
+    );
+    sections.push("komt_eraan");
+  }
 
+  // Wacht op jouw go
+  if ((proposals ?? []).length) {
+    blocks.push(
+      card(
+        label("Wacht op jouw go") +
+          (proposals ?? [])
+            .map((p) => `<div style="font:400 15px/1.5 Arial,sans-serif;color:${C.body};margin-bottom:6px">${esc(p.title)} <span style="color:${C.muted}">· ${esc(since(p.created_at))}</span></div>`)
+            .join(""),
+      ),
+    );
+    sections.push("voorstellen");
+  }
+
+  // Rustig
+  const calm = list.filter((t) => !troubled.has(t.id)).map((t) => t.name);
+  if (calm.length && level !== "rustig") {
+    blocks.push(card(label("Rustig") + `<div style="font:400 15px/1.6 Arial,sans-serif;color:#3E4447">${esc(calm.join(", "))}</div>`));
+    sections.push("rustig");
+  }
+
+  // Voet
+  const foot: string[] = [];
+  for (const i of acked) {
+    foot.push(`Erkend: ${esc(nameOf.get(i.target_id) ?? "")} · ${esc(i.title)} tot ${esc(brusselsDate(new Date(i.acknowledged_until!), { day: "numeric", month: "short" }))}`);
+  }
+  if (monitor.length) {
+    foot.push(`Zelfcontrole: ${monitor.length} meting(en) lukken al een tijd niet — ${esc(monitor.map((i) => nameOf.get(i.target_id)).join(", "))}`);
+  } else {
+    foot.push(`Zelfcontrole: metingen in orde${unknownCount ? ` (${unknownCount} losse meetfout(en), telt niet mee)` : ""}`);
+  }
+
+  const subjectLevel =
+    level === "actie"
+      ? `Actie · ${actie.length} open${aandacht.length ? `, ${aandacht.length} aandacht` : ""}`
+      : level === "aandacht"
+        ? `Aandacht · ${aandacht.length}`
+        : "Rustig · Nomadix";
+  const subject = `${subjectLevel} · ${dateShort}`;
+
+  const html = `<div style="background:${C.bg};padding:28px 16px;font-family:Arial,sans-serif;color:${C.text}">
+  <div style="max-width:600px;margin:0 auto">
+    <div style="font:600 13px/1.4 Arial,sans-serif;color:${C.muted};margin:0 0 14px 4px">Nomadix Watchtower · ${esc(dateLong)}</div>
+    ${blocks.join("")}
+    <div style="text-align:center;margin:18px 0">${button(DASHBOARD_URL + "/dashboard", "Open dashboard")}</div>
+    <div style="font:400 13px/1.6 Arial,sans-serif;color:${C.muted};text-align:center">${foot.join("<br>")}</div>
+  </div>
+</div>`;
+
+  if (opts.dryRun) return { sent: false, subject, sections, html };
   const sent = await sendAlertMail(subject, html);
-  return { sent, sections };
+  return { sent, subject, sections };
 }
