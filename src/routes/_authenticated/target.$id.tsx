@@ -18,9 +18,12 @@ import {
 } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { IncidentList, useIncidents } from "@/components/incidents";
+import { Promises } from "@/components/promises";
+import { statusLine } from "@/lib/policy";
+import type { CheckStatus } from "@/lib/checks.server";
 import {
   CHECK_LABEL,
-  KindBadge,
+  KIND_LABEL,
   StatusDot,
   StatusText,
   formatDateTime,
@@ -190,32 +193,37 @@ function TargetDetailPage() {
     uptime: s.uptime_pct === null ? 0 : Number(s.uptime_pct),
   }));
 
+  const checkCfg = (target.checks ?? {}) as Record<string, boolean>;
+  const enabledCheckKeys = ["http", "ssl", "dns", "health", "form_smoke"].filter((k) =>
+    k === "http" ? checkCfg.http !== false : !!checkCfg[k],
+  );
+  const latestPerCheck = new Map<string, { status: string; summary: string }>();
+  for (const r of resultsQuery.data ?? []) {
+    if (latestPerCheck.has(r.check_key)) continue;
+    latestPerCheck.set(r.check_key, { status: r.status, summary: statusLine(r.check_key, r.status as CheckStatus, r.detail, r.latency_ms) });
+  }
+
   return (
     <AppShell>
-      <div className="space-y-8">
-        <header className="fade-in-card panel flex flex-wrap items-center gap-3 p-5">
-          <StatusDot status={target.status} />
-          <div>
-            <h1 className="flex items-center gap-2 text-lg font-semibold tracking-tight">
-              {target.name}
-              <KindBadge kind={target.kind} />
-            </h1>
-            <a
-              href={target.url}
-              target="_blank"
-              rel="noreferrer"
-              className="text-tech text-[11px] text-muted-foreground hover:text-primary"
-            >
-              {target.url}
-            </a>
+      <div className="mx-auto max-w-3xl space-y-8">
+        <header className="space-y-3 pt-1">
+          <Link to="/dashboard" className="inline-flex min-h-11 items-center text-sm text-muted-foreground hover:text-foreground">
+            ‹ Overzicht
+          </Link>
+          <div className="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+            {KIND_LABEL[target.kind] ?? target.kind}
           </div>
-          <div className="ml-auto text-right">
+          <h1 className="text-3xl font-semibold tracking-tight">{target.name}</h1>
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
             <StatusText status={target.status} />
-            <p className="text-tech text-[10px] text-muted-foreground">
-              {relativeTime(target.last_scanned_at)}
-            </p>
+            <a href={target.url} target="_blank" rel="noreferrer" className="text-muted-foreground hover:text-primary">
+              {target.url.replace(/^https?:\/\//, "")}
+            </a>
+            <span className="text-tech text-[11px] text-muted-foreground">gemeten {relativeTime(target.last_scanned_at)}</span>
           </div>
         </header>
+
+        <Promises targetId={target.id} checks={enabledCheckKeys} latest={latestPerCheck} />
 
         <section className="space-y-3">
           <h2 className="text-tech text-xs text-muted-foreground">Incidenten</h2>
@@ -227,8 +235,8 @@ function TargetDetailPage() {
         </section>
 
         {form && (
-          <section className="panel fade-in-card space-y-5 p-5">
-            <h2 className="text-tech text-xs text-muted-foreground">Configuratie</h2>
+          <details className="panel group p-5"><summary className="cursor-pointer list-none text-tech text-xs text-muted-foreground">Instellingen ▸</summary><section className="mt-5 space-y-5">
+
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor="name">Naam</Label>
@@ -333,9 +341,10 @@ function TargetDetailPage() {
             <Button disabled={save.isPending} onClick={() => save.mutate(form)}>
               {save.isPending ? "Bezig…" : "Opslaan"}
             </Button>
-          </section>
+          </section></details>
         )}
 
+        <details className="panel p-5"><summary className="cursor-pointer list-none text-tech text-xs text-muted-foreground">Ruwe metingen en geschiedenis ▸</summary><div className="mt-5 space-y-8">
         <section className="panel fade-in-card p-5">
           <h2 className="text-tech text-xs text-muted-foreground">Uptime-trend (90 dagen)</h2>
           <div className="mt-4 h-56">
@@ -458,6 +467,7 @@ function TargetDetailPage() {
             )}
           </div>
         </section>
+        </div></details>
       </div>
     </AppShell>
   );

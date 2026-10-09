@@ -1,68 +1,52 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Line, LineChart, ResponsiveContainer, YAxis } from "recharts";
+import { useState } from "react";
 import { toast } from "sonner";
 import { AppShell } from "@/components/app-shell";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { IncidentList, isAcknowledged, useIncidents } from "@/components/incidents";
-import {
-  CategoryBadge,
-  KindBadge,
-  StatusDot,
-  relativeTime,
-} from "@/components/watchtower";
+import { CategoryBadge, formatDateTime, relativeTime } from "@/components/watchtower";
+import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
   head: () => ({
     meta: [
       { title: "Overzicht — Nomadix Watchtower" },
-      { name: "description", content: "Monitoring-overzicht van alle Nomadix-properties." },
-      { property: "og:title", content: "Overzicht — Nomadix Watchtower" },
-      {
-        property: "og:description",
-        content: "Monitoring-overzicht van alle Nomadix-properties.",
-      },
-      { property: "og:type", content: "website" },
-      { name: "twitter:card", content: "summary_large_image" },
+      { name: "description", content: "Moet ik vandaag iets doen? Alle Nomadix-properties in één oogopslag." },
     ],
   }),
   component: DashboardPage,
 });
 
-const RANK: Record<string, number> = { fail: 0, warn: 1, unknown: 2, ok: 3 };
+type Level = "actie" | "aandacht" | "rustig";
+
+const GROUPS: Array<{ name: string; kinds: string[] }> = [
+  { name: "SellQo & winkels", kinds: ["platform", "storefront"] },
+  { name: "Eigen ventures", kinds: ["venture"] },
+  { name: "Klantensites", kinds: ["client_site"] },
+];
+
+const LEVEL_COLOR: Record<string, string> = {
+  actie: "var(--crit)",
+  aandacht: "var(--warn)",
+  rustig: "var(--ok)",
+  erkend: "var(--muted-foreground)",
+  onbekend: "var(--muted-foreground)",
+};
 
 function DashboardPage() {
   const queryClient = useQueryClient();
+  const [showAll, setShowAll] = useState(false);
 
   const targetsQuery = useQuery({
     queryKey: ["watch_targets"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("watch_targets").select("*");
+      const { data, error } = await supabase.from("watch_targets").select("*").eq("enabled", true).order("name");
       if (error) throw error;
       return data;
     },
-  });
-
-  const latencyQuery = useQuery({
-    queryKey: ["http_latency"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("scan_results")
-        .select("target_id, latency_ms, measured_at")
-        .eq("check_key", "http")
-        .order("measured_at", { ascending: false })
-        .limit(1000);
-      if (error) throw error;
-      const byTarget: Record<string, { latency: number }[]> = {};
-      for (const row of data ?? []) {
-        const list = (byTarget[row.target_id] ??= []);
-        if (list.length < 24 && typeof row.latency_ms === "number")
-          list.push({ latency: row.latency_ms });
-      }
-      for (const key of Object.keys(byTarget)) byTarget[key].reverse();
-      return byTarget;
-    },
+    refetchInterval: 60_000,
   });
 
   const proposalsQuery = useQuery({
@@ -71,7 +55,7 @@ function DashboardPage() {
       const { data, error } = await supabase
         .from("proposals")
         .select("*")
-        .in("status", ["proposed", "approved"])
+        .eq("status", "proposed")
         .order("created_at", { ascending: false });
       if (error) throw error;
       return data;
@@ -88,99 +72,137 @@ function DashboardPage() {
     },
     onSuccess: (_d, vars) => {
       queryClient.invalidateQueries({ queryKey: ["proposals"] });
-      toast.success(vars.status === "approved" ? "Voorstel goedgekeurd" : "Voorstel afgewezen");
+      toast.success(vars.status === "approved" ? "Go gegeven" : "Afgewezen");
     },
     onError: (e: Error) => toast.error(e.message),
   });
 
+  const incidentsQuery = useIncidents();
   const targets = targetsQuery.data ?? [];
-  const counts = {
-    ok: targets.filter((t) => t.status === "ok").length,
-    warn: targets.filter((t) => t.status === "warn").length,
-    fail: targets.filter((t) => t.status === "fail").length,
+  const incidents = incidentsQuery.data ?? [];
+  const active = incidents.filter((i) => !isAcknowledged(i) && i.severity !== "monitor");
+  const acked = incidents.filter((i) => isAcknowledged(i));
+  const monitor = incidents.filter((i) => i.severity === "monitor");
+  const actie = active.filter((i) => i.severity === "actie");
+  const aandacht = active.filter((i) => i.severity === "aandacht");
+
+  const levelOf = (targetId: string): string => {
+    const mine = incidents.filter((i) => i.target_id === targetId && i.severity !== "monitor");
+    if (mine.some((i) => i.severity === "actie" && !isAcknowledged(i))) return "actie";
+    if (mine.some((i) => i.severity === "aandacht" && !isAcknowledged(i))) return "aandacht";
+    if (mine.some((i) => isAcknowledged(i))) return "erkend";
+    const t = targets.find((x) => x.id === targetId);
+    return t?.status === "unknown" ? "onbekend" : "rustig";
   };
+
+  const level: Level = actie.length ? "actie" : aandacht.length ? "aandacht" : "rustig";
+  const troubled = new Set(active.map((i) => i.target_id));
+  const actieTargets = new Set(actie.map((i) => i.target_id)).size;
+  const aandachtTargets = new Set(aandacht.map((i) => i.target_id)).size;
+  const headline =
+    level === "actie"
+      ? `${actieTargets === 1 ? "1 property vraagt" : `${actieTargets} properties vragen`} actie`
+      : level === "aandacht"
+        ? `${aandachtTargets === 1 ? "1 property vraagt" : `${aandachtTargets} properties vragen`} aandacht`
+        : "Alles rustig";
+  const sub =
+    level === "rustig"
+      ? `${targets.length} properties, alle beloftes gehouden.`
+      : `${targets.length - troubled.size} van de ${targets.length} properties zijn rustig.`;
   const lastScan = targets
     .map((t) => t.last_scanned_at)
     .filter(Boolean)
     .sort()
     .at(-1) as string | undefined;
 
-  const sorted = [...targets].sort((a, b) => {
-    const r = (RANK[a.status] ?? 2) - (RANK[b.status] ?? 2);
-    return r !== 0 ? r : a.name.localeCompare(b.name, "nl");
-  });
-
-  const incidentsQuery = useIncidents();
-  const incidents = incidentsQuery.data ?? [];
-  const activeIncidents = incidents.filter((i) => !isAcknowledged(i) && i.severity !== "monitor");
-  const headline =
-    activeIncidents.some((i) => i.severity === "actie")
-      ? `${activeIncidents.filter((i) => i.severity === "actie").length} ding(en) vragen actie`
-      : activeIncidents.length > 0
-        ? `${activeIncidents.length} ding(en) vragen aandacht`
-        : "Alles rustig";
-
-  const proposed = (proposalsQuery.data ?? []).filter((p) => p.status === "proposed");
-  const approved = (proposalsQuery.data ?? []).filter((p) => p.status === "approved");
+  const loading = targetsQuery.isLoading || incidentsQuery.isLoading;
+  const proposals = proposalsQuery.data ?? [];
 
   return (
     <AppShell>
-      <div className="space-y-8">
-        <header className="fade-in-card panel flex flex-wrap items-center gap-6 p-5">
-          <div>
-            <h1 className="text-lg font-semibold tracking-tight">{headline}</h1>
-            <p className="text-tech mt-1 text-[11px] text-muted-foreground">
-              Laatste scan: {relativeTime(lastScan)}
-            </p>
+      <div className="mx-auto max-w-5xl space-y-8">
+        <header className="pt-2">
+          <div className="mb-3 flex items-center gap-2">
+            <span className="inline-block size-2.5 rounded-full" style={{ background: LEVEL_COLOR[level] }} />
+            <span className="text-xs font-semibold uppercase tracking-[0.08em]" style={{ color: LEVEL_COLOR[level] }}>
+              {level === "actie" ? "Actie" : level === "aandacht" ? "Aandacht" : "Rustig"}
+            </span>
+            <span className="text-tech ml-auto text-[11px] text-muted-foreground">
+              gemeten {relativeTime(lastScan)}
+            </span>
           </div>
-          <div className="ml-auto flex items-center gap-6">
-            <Metric label="OK" value={counts.ok} status="ok" />
-            <Metric label="Warn" value={counts.warn} status="warn" />
-            <Metric label="Fail" value={counts.fail} status="fail" />
-          </div>
+          <h1 className="text-3xl font-semibold leading-tight tracking-tight md:text-4xl">
+            {loading ? "Even kijken…" : headline}
+          </h1>
+          {!loading && <p className="mt-2 text-[15px] text-muted-foreground">{sub}</p>}
         </header>
 
-        <section className="space-y-3">
-          <h2 className="text-tech text-xs text-muted-foreground">Incidenten</h2>
-          {incidentsQuery.isLoading ? (
-            <p className="text-sm text-muted-foreground">Laden…</p>
-          ) : (
-            <IncidentList incidents={incidents} emptyText="Geen open incidenten — alles rustig." />
-          )}
-        </section>
+        {actie.length > 0 && (
+          <section className="space-y-3" aria-label="Actie">
+            {actie.map((i) => (
+              <Link
+                key={i.id}
+                to="/target/$id"
+                params={{ id: i.target_id }}
+                className="block rounded-2xl border border-[var(--crit)]/40 bg-[var(--crit)]/8 p-5 transition-colors hover:bg-[var(--crit)]/12"
+              >
+                <div className="mb-1 flex items-center justify-between gap-3">
+                  <span className="font-semibold">{i.watch_targets?.name}</span>
+                  <span className="text-tech text-xs text-[var(--crit)]">sinds {formatDateTime(i.opened_at)}</span>
+                </div>
+                <p className="text-[15px]">{i.title}</p>
+                {i.summary && <p className="mt-1 text-sm text-muted-foreground">{i.summary}</p>}
+              </Link>
+            ))}
+          </section>
+        )}
 
-        {proposed.length + approved.length > 0 && (
+        {aandacht.length > 0 && (
+          <section className="space-y-3" aria-label="Aandacht">
+            {[...new Set(aandacht.map((i) => i.target_id))].map((targetId) => {
+              const items = aandacht.filter((i) => i.target_id === targetId);
+              return (
+                <Link
+                  key={targetId}
+                  to="/target/$id"
+                  params={{ id: targetId }}
+                  className="block rounded-2xl border border-[var(--warn)]/30 bg-[var(--warn)]/6 p-5 transition-colors hover:bg-[var(--warn)]/10"
+                >
+                  <div className="mb-1 flex items-center justify-between gap-3">
+                    <span className="font-semibold">{items[0].watch_targets?.name}</span>
+                    <span className="text-xs font-semibold text-[var(--warn)]">Aandacht</span>
+                  </div>
+                  {items.map((i) => (
+                    <p key={i.id} className="text-sm text-muted-foreground">
+                      <span className="text-foreground">{i.title}</span>
+                      {i.summary ? ` — ${i.summary}` : ""}
+                    </p>
+                  ))}
+                </Link>
+              );
+            })}
+          </section>
+        )}
+
+        {proposals.length > 0 && (
           <section className="space-y-3">
             <h2 className="text-tech text-xs text-muted-foreground">Wacht op jouw go</h2>
             <div className="grid gap-3 md:grid-cols-2">
-              {proposed.map((p, i) => (
-                <article
-                  key={p.id}
-                  className="fade-in-card panel p-4"
-                  style={{ animationDelay: `${i * 40}ms` }}
-                >
+              {proposals.map((p) => (
+                <article key={p.id} className="panel p-4">
                   <div className="flex items-center gap-2">
                     <CategoryBadge category={p.category} />
-                    <span className="text-tech text-[10px] text-muted-foreground">
-                      {relativeTime(p.created_at)}
-                    </span>
+                    <span className="text-tech text-[10px] text-muted-foreground">{relativeTime(p.created_at)}</span>
                   </div>
                   <h3 className="mt-2 font-medium">{p.title}</h3>
-                  <p className="mt-1 line-clamp-3 text-sm text-muted-foreground">{p.description}</p>
-                  <p className="mt-2 text-xs text-muted-foreground">
-                    <span className="text-tech">Actie:</span> {p.proposed_action}
-                  </p>
+                  <p className="mt-1 line-clamp-3 text-sm text-muted-foreground">{p.proposed_action}</p>
                   <div className="mt-4 flex gap-2">
-                    <Button
-                      size="sm"
-                      disabled={decide.isPending}
-                      onClick={() => decide.mutate({ id: p.id, status: "approved" })}
-                    >
+                    <Button size="sm" disabled={decide.isPending} onClick={() => decide.mutate({ id: p.id, status: "approved" })}>
                       Go
                     </Button>
                     <Button
                       size="sm"
-                      variant="outline"
+                      variant="ghost"
                       disabled={decide.isPending}
                       onClick={() => decide.mutate({ id: p.id, status: "rejected" })}
                     >
@@ -190,94 +212,82 @@ function DashboardPage() {
                 </article>
               ))}
             </div>
-
-            {approved.length > 0 && (
-              <div className="panel p-4">
-                <h3 className="text-tech text-[11px] text-muted-foreground">
-                  Goedgekeurd — wacht op uitvoering
-                </h3>
-                <ul className="mt-2 space-y-1">
-                  {approved.map((p) => (
-                    <li key={p.id} className="flex items-center gap-2 text-sm">
-                      <CategoryBadge category={p.category} />
-                      <span className="truncate">{p.title}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
           </section>
         )}
 
-        <section className="space-y-3">
-          <h2 className="text-tech text-xs text-muted-foreground">Targets</h2>
-          {targetsQuery.isLoading ? (
-            <p className="text-sm text-muted-foreground">Laden…</p>
-          ) : (
-            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-              {sorted.map((t, i) => (
-                <Link
-                  key={t.id}
-                  to="/target/$id"
-                  params={{ id: t.id }}
-                  className="fade-in-card panel block p-4 transition-colors hover:border-primary/50"
-                  style={{ animationDelay: `${i * 30}ms` }}
-                >
-                  <div className="flex items-start gap-2">
-                    <StatusDot status={t.status} className="mt-1.5" />
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2">
-                        <h3 className="truncate font-medium">{t.name}</h3>
-                        <KindBadge kind={t.kind} />
-                      </div>
-                      <p className="text-tech mt-0.5 truncate text-[10px] text-muted-foreground">
-                        {t.url.replace(/^https?:\/\//, "")}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="mt-3 h-10">
-                    <Sparkline data={latencyQuery.data?.[t.id] ?? []} status={t.status} />
-                  </div>
-                  <p className="text-tech mt-2 text-[10px] text-muted-foreground">
-                    {relativeTime(t.last_scanned_at)}
-                    {!t.enabled && " · uitgeschakeld"}
-                  </p>
-                </Link>
-              ))}
-            </div>
-          )}
+        <section className="space-y-6">
+          {GROUPS.map((g) => {
+            const list = targets.filter((t) => g.kinds.includes(t.kind));
+            if (!list.length) return null;
+            const calm = list.filter((t) => levelOf(t.id) === "rustig").length;
+            const parts = [
+              `${calm} rustig`,
+              ...(["actie", "aandacht", "erkend"] as const)
+                .map((lv) => [lv, list.filter((t) => levelOf(t.id) === lv).length] as const)
+                .filter(([, n]) => n > 0)
+                .map(([lv, n]) => `${n} ${lv}`),
+            ];
+            return (
+              <div key={g.name}>
+                <div className="mb-2.5 flex items-baseline justify-between">
+                  <h2 className="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">{g.name}</h2>
+                  <span className="text-xs text-muted-foreground">{parts.join(" · ")}</span>
+                </div>
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
+                  {list.map((t) => {
+                    const lv = levelOf(t.id);
+                    return (
+                      <Link
+                        key={t.id}
+                        to="/target/$id"
+                        params={{ id: t.id }}
+                        className={cn(
+                          "flex min-h-11 items-center gap-2.5 rounded-xl border border-transparent bg-card px-3 py-2.5 transition-colors hover:border-border",
+                        )}
+                      >
+                        <span
+                          className="inline-block size-2 shrink-0 rounded-full"
+                          style={{ background: LEVEL_COLOR[lv] }}
+                          aria-label={lv}
+                        />
+                        <span className="truncate text-sm font-medium">{t.name}</span>
+                      </Link>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })}
         </section>
+
+        <footer className="space-y-2 border-t border-border pt-4 text-sm text-muted-foreground">
+          {acked.map((i) => (
+            <div key={i.id} className="flex justify-between gap-4">
+              <span className="truncate">
+                Erkend · {i.watch_targets?.name} — {i.title}
+              </span>
+              <span className="shrink-0">tot {formatDateTime(i.acknowledged_until)}</span>
+            </div>
+          ))}
+          <div className="flex justify-between gap-4">
+            <span>
+              Zelfcontrole ·{" "}
+              {monitor.length
+                ? `${monitor.length} meting(en) lukken al een tijd niet`
+                : "alle metingen in orde"}
+            </span>
+          </div>
+          <button
+            type="button"
+            className="pt-2 text-xs underline-offset-4 hover:underline"
+            onClick={() => setShowAll((v) => !v)}
+          >
+            {showAll ? "Verberg alle open incidenten" : "Toon alle open incidenten (ook erkend)"}
+          </button>
+        </footer>
+
+        {showAll && <IncidentList incidents={incidents} emptyText="Geen open incidenten." />}
       </div>
     </AppShell>
-  );
-}
-
-function Metric({ label, value, status }: { label: string; value: number; status: string }) {
-  return (
-    <div className="flex items-center gap-2">
-      <StatusDot status={status} />
-      <span className="font-mono text-xl leading-none">{value}</span>
-      <span className="text-tech text-[10px] text-muted-foreground">{label}</span>
-    </div>
-  );
-}
-
-function Sparkline({ data, status }: { data: { latency: number }[]; status: string }) {
-  if (data.length < 2) {
-    return (
-      <div className="text-tech flex h-full items-center text-[10px] text-muted-foreground">
-        geen data
-      </div>
-    );
-  }
-  const stroke =
-    status === "fail" ? "var(--crit)" : status === "warn" ? "var(--warn)" : "var(--primary)";
-  return (
-    <ResponsiveContainer width="100%" height="100%">
-      <LineChart data={data} margin={{ top: 2, bottom: 2, left: 0, right: 0 }}>
-        <YAxis hide domain={["dataMin", "dataMax"]} />
-        <Line type="monotone" dataKey="latency" stroke={stroke} strokeWidth={1.5} dot={false} />
-      </LineChart>
-    </ResponsiveContainer>
   );
 }

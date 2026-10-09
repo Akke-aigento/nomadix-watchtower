@@ -371,6 +371,17 @@ export type Database = {
       get_heartbeat_url: { Args: never; Returns: string }
       get_vapid_private_jwk: { Args: never; Returns: string }
       is_watchtower_admin: { Args: never; Returns: boolean }
+      wt_daily_check_status: {
+        Args: { p_target: string; p_days?: number }
+        Returns: {
+          check_key: string
+          day: string
+          fail: number
+          ok: number
+          unknown: number
+          warn: number
+        }[]
+      }
       wt_recent_results: {
         Args: { n?: number }
         Returns: {

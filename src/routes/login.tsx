@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Activity, Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -56,9 +56,7 @@ function LoginPage() {
     <main className="flex min-h-screen items-center justify-center px-6">
       <div className="w-full max-w-sm">
         <Link to="/" className="mb-8 flex items-center gap-3">
-          <span className="flex size-9 items-center justify-center rounded-md border border-border bg-card">
-            <Activity className="size-4 text-primary" />
-          </span>
+          <img src="/logo-mark.svg" alt="" aria-hidden="true" className="size-10" />
           <span className="text-tech text-xs text-muted-foreground">
             Nomadix Watchtower
           </span>

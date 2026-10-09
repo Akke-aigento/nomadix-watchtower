@@ -30,7 +30,7 @@ function Index() {
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,var(--color-accent),transparent_60%)] opacity-50" />
       <div className="relative w-full max-w-xl text-center">
         <div className="mx-auto flex size-12 items-center justify-center rounded-lg border border-border bg-card">
-          <Activity className="size-6 text-primary" />
+          <img src="/logo-mark.svg" alt="" aria-hidden="true" className="size-8" />
         </div>
         <p className="text-tech mt-6 text-xs text-muted-foreground">Nomadix internal</p>
         <h1 className="mt-2 text-4xl font-semibold tracking-tight sm:text-5xl">

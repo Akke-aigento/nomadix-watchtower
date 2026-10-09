@@ -125,6 +125,48 @@ export function checkName(checkKey: string): string {
   return CHECK_NAME[checkKey] ?? checkKey;
 }
 
+/** Labels voor checks die projecten zelf rapporteren via hun health-endpoint. */
+const HEALTH_LABEL: Record<string, string> = {
+  mail_sync: "mail-sync",
+  stalled_syncs: "vastgelopen syncs",
+  recent_sync_errors: "sync-fouten",
+  gave_up_uids: "opgegeven berichten",
+  form_activity: "formulieren stil",
+  open_invites: "openstaande uitnodigingen",
+  notify_failures: "mislukte notificaties",
+  honeypot_hits: "spam-pogingen",
+  suppressed_recent: "onderdrukte mails",
+  cron_reminders: "herinneringscron",
+};
+
+export function healthLabel(key: string): string {
+  return HEALTH_LABEL[key] ?? key.replace(/_/g, " ");
+}
+
+/** ISO-tijdstippen in vrije tekst leesbaar maken (2026-07-29T20:52:05Z → 29/07). */
+export function humanizeText(text: string): string {
+  return text.replace(/(\d{4})-(\d{2})-(\d{2})T[\d:.]+Z?/g, (_m, _y, mo, d) => `${d}/${mo}`);
+}
+
+/** Eén regel over de laatste meting, ook als alles goed is. */
+export function statusLine(checkKey: string, status: CheckStatus, detail: unknown, latencyMs?: number | null): string {
+  if (status !== "ok") return describe(checkKey, status, detail).summary || describe(checkKey, status, detail).title;
+  const d = (detail && typeof detail === "object" ? detail : {}) as Record<string, unknown>;
+  switch (checkKey) {
+    case "http":
+      return typeof latencyMs === "number" ? `Antwoordt in ${(latencyMs / 1000).toFixed(1).replace(".", ",")} s` : "Antwoordt";
+    case "ssl":
+      if (d.managed_by === "lovable") return "Beheerd door Lovable, niets te doen";
+      return typeof d.days_left === "number" ? `Nog ${d.days_left} dagen geldig` : "Geldig";
+    case "dns":
+      return "SPF en DMARC staan goed";
+    case "health":
+      return "Alle interne checks in orde";
+    default:
+      return "In orde";
+  }
+}
+
 /** Mensentaal-titel + samenvatting voor een incident. */
 export function describe(
   checkKey: string,
@@ -165,13 +207,16 @@ export function describe(
       const checks = Array.isArray(d.checks) ? (d.checks as Array<Record<string, unknown>>) : [];
       const bad = checks.filter((c) => c && (c.status === "fail" || c.status === "warn"));
       if (typeof d.error === "string") return { title: "Health-endpoint antwoordt niet", summary: d.error };
+      const labels = bad.map((c) => healthLabel(String(c.key ?? c.name ?? "check")));
+      const first = labels[0] ? labels[0][0].toUpperCase() + labels[0].slice(1) : "";
       return {
-        title: bad.length ? `Health: ${bad.map((c) => String(c.key ?? c.name ?? "check")).join(", ")}` : "Health meldt een probleem",
-        summary: bad
-          .map((c) => (typeof c.detail === "string" ? c.detail : ""))
-          .filter(Boolean)
-          .join(" · ")
-          .slice(0, 300),
+        title: labels.length ? [first, ...labels.slice(1)].join(", ") : "Health meldt een probleem",
+        summary: humanizeText(
+          bad
+            .map((c) => (typeof c.detail === "string" ? c.detail : ""))
+            .filter(Boolean)
+            .join(" · "),
+        ).slice(0, 300),
       };
     }
     case "form_smoke":

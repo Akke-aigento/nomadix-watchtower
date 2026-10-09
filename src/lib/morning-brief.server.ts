@@ -107,11 +107,13 @@ export async function morningBrief(opts: { dryRun?: boolean } = {}): Promise<{
   // Kop
   const level = actie.length ? "actie" : aandacht.length ? "aandacht" : "rustig";
   const levelColor = level === "actie" ? C.actie : level === "aandacht" ? C.aandacht : C.rustig;
+  const actieTargets = new Set(actie.map((i) => i.target_id)).size;
+  const aandachtTargets = new Set(aandacht.map((i) => i.target_id)).size;
   const headline =
     level === "actie"
-      ? `${actie.length === 1 ? "1 ding vraagt" : `${actie.length} dingen vragen`} actie.`
+      ? `${actieTargets === 1 ? "1 property vraagt" : `${actieTargets} properties vragen`} actie.`
       : level === "aandacht"
-        ? `${aandacht.length === 1 ? "1 ding vraagt" : `${aandacht.length} dingen vragen`} aandacht.`
+        ? `${aandachtTargets === 1 ? "1 property vraagt" : `${aandachtTargets} properties vragen`} aandacht.`
         : "Alles rustig.";
   const sub = level === "rustig"
     ? `${list.length} properties, alle beloftes gehouden.`
@@ -141,11 +143,17 @@ export async function morningBrief(opts: { dryRun?: boolean } = {}): Promise<{
 
   // Aandacht
   if (aandacht.length) {
-    const rows = aandacht
+    const byTarget = new Map<string, IncidentRow[]>();
+    for (const i of aandacht) byTarget.set(i.target_id, [...(byTarget.get(i.target_id) ?? []), i]);
+    const rows = [...byTarget.entries()]
       .map(
-        (i) => `<div style="margin:0 0 12px 0">
-          <div style="font:600 15px/1.4 Arial,sans-serif;color:${C.text}">${esc(nameOf.get(i.target_id) ?? "")} — ${esc(i.title)}</div>
-          ${i.summary ? `<div style="font:400 14px/1.5 Arial,sans-serif;color:${C.body}">${esc(i.summary)}</div>` : ""}
+        ([targetId, items]) => `<div style="margin:0 0 16px 0">
+          <div style="font:600 16px/1.4 Arial,sans-serif;color:${C.text};margin-bottom:4px"><a href="${DASHBOARD_URL}/target/${targetId}" style="color:${C.text};text-decoration:none">${esc(nameOf.get(targetId) ?? "")}</a></div>
+          ${items
+            .map(
+              (i) => `<div style="font:400 15px/1.5 Arial,sans-serif;color:${C.body}"><strong style="font-weight:600">${esc(i.title)}</strong>${i.summary ? ` — <span style="color:${C.muted}">${esc(i.summary)}</span>` : ""}</div>`,
+            )
+            .join("")}
         </div>`,
       )
       .join("");
@@ -156,7 +164,7 @@ export async function morningBrief(opts: { dryRun?: boolean } = {}): Promise<{
   // Sinds gisteren
   const recent = (recentInc ?? []) as IncidentRow[];
   const resolved = recent.filter((i) => i.status === "resolved" && i.resolved_at && i.resolved_at >= dayAgo);
-  const opened = recent.filter((i) => i.opened_at >= dayAgo);
+  const opened = recent.filter((i) => i.opened_at >= dayAgo && !isAcked(i));
   if (resolved.length || opened.length) {
     const line = (tag: string, color: string, i: IncidentRow) =>
       `<div style="font:400 15px/1.5 Arial,sans-serif;color:${C.body};margin-bottom:6px"><span style="display:inline-block;width:78px;font-weight:600;color:${color}">${tag}</span>${esc(nameOf.get(i.target_id) ?? "")} · ${esc(i.title)}</div>`;
