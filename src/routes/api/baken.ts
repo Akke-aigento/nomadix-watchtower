@@ -7,24 +7,15 @@ import { createFileRoute } from "@tanstack/react-router";
  * Provider: OPENAI_API_KEY (als die er is), anders LOVABLE_API_KEY (Lovable AI Gateway).
  * Geen sleutel → 501, dan antwoordt Baken lokaal (0 credits).
  */
-const SYSTEM = `Je bent Baken, de assistent van Watchtower (Nomadix BV, Akke). Je spreekt Vlaams, kort en direct, als een maat die meekijkt.
-Antwoord in maximaal 3 zinnen, zonder opsommingstekens, zonder markdown. Gebruik enkel de cijfers uit de context; verzin niets.
-Weet je iets niet, zeg dat eerlijk. Antwoord ALTIJD als JSON: {"say": "<tekst>", "show": [<0-2 uit "vandaag","credits","agenda","voorstellen">]}.`;
-
-async function isAdmin(token: string): Promise<boolean> {
-  const url = process.env.SUPABASE_URL;
-  const key = process.env.SUPABASE_PUBLISHABLE_KEY;
-  if (!url || !key || token.split(".").length !== 3) return false;
-  const { createClient } = await import("@supabase/supabase-js");
-  const sb = createClient(url, key, {
-    global: { headers: { Authorization: `Bearer ${token}` } },
-    auth: { persistSession: false },
-  });
-  const { data: user } = await sb.auth.getUser(token);
-  if (!user.user) return false;
-  const { data } = await sb.rpc("is_watchtower_admin");
-  return data === true;
-}
+const SYSTEM = `Je bent Baken, de stem van Watchtower: het baken op de toren dat over alle sites en koppelingen van Akke (Nomadix BV) waakt.
+Je praat met Akke zoals een slimme maat naast hem: Vlaams, warm, natuurlijk en kort, alsof je het hardop zegt. Spreek hem aan met "je".
+Regels:
+- Maximaal 3 korte zinnen, geschikt om voor te lezen. Geen opsommingen, geen markdown, geen emoji, geen technische codes of ID's.
+- Rond getallen af en zeg ze zoals een mens ("zo'n 600 seconden", "bijna de helft").
+- Gebruik enkel feiten uit de context; verzin niets. Weet je het niet, zeg dat eerlijk en kort.
+- Er wordt naast je antwoord een beeld getoond (zie "beeld" in de context); verwijs er gerust naar ("kijk, ...").
+- Eindig waar nuttig met één concrete volgende stap of vraag.
+Antwoord ALTIJD als JSON: {"say": "<tekst>", "show": [<0-2 uit "vandaag","credits","agenda","voorstellen","bezoekers","vondsten">]}.`;
 
 async function callModel(messages: { role: string; content: string }[]): Promise<string | null> {
   const openai = process.env.OPENAI_API_KEY;
@@ -71,14 +62,21 @@ async function callModel(messages: { role: string; content: string }[]): Promise
 export const Route = createFileRoute("/api/baken")({
   server: {
     handlers: {
-      GET: async () =>
-        Response.json({
-          baken: "v1",
-          model: !!(process.env.OPENAI_API_KEY || process.env.LOVABLE_API_KEY),
-        }),
+      GET: async () => {
+        const { elevenKey } = await import("@/lib/baken-auth.server");
+        return Response.json({
+          baken: "v2",
+          model: process.env.OPENAI_API_KEY
+            ? "openai"
+            : process.env.LOVABLE_API_KEY
+              ? "lovable"
+              : null,
+          voice: elevenKey() ? "elevenlabs" : null,
+        });
+      },
       POST: async ({ request }) => {
-        const token = (request.headers.get("authorization") ?? "").replace(/^Bearer /, "");
-        if (!(await isAdmin(token))) return new Response("Unauthorized", { status: 401 });
+        const { isBakenAdmin } = await import("@/lib/baken-auth.server");
+        if (!(await isBakenAdmin(request))) return new Response("Unauthorized", { status: 401 });
         if (!process.env.OPENAI_API_KEY && !process.env.LOVABLE_API_KEY)
           return Response.json({ error: "geen model" }, { status: 501 });
 
@@ -99,14 +97,12 @@ export const Route = createFileRoute("/api/baken")({
           { role: "system", content: SYSTEM },
           {
             role: "system",
-            content: `Context (cijfers van nu): ${JSON.stringify(body.context ?? {}).slice(0, 6000)}`,
+            content: `Context (cijfers van nu): ${JSON.stringify(body.context ?? {}).slice(0, 9000)}`,
           },
-          ...(body.history ?? [])
-            .slice(-6)
-            .map((m) => ({
-              role: m.role === "assistant" ? "assistant" : "user",
-              content: String(m.content).slice(0, 600),
-            })),
+          ...(body.history ?? []).slice(-6).map((m) => ({
+            role: m.role === "assistant" ? "assistant" : "user",
+            content: String(m.content).slice(0, 600),
+          })),
           { role: "user", content: q },
         ];
         const raw = await callModel(messages);

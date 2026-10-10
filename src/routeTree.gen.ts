@@ -21,6 +21,8 @@ import { Route as AuthenticatedMeldingenRouteImport } from './routes/_authentica
 import { Route as AuthenticatedProposalsRouteImport } from './routes/_authenticated/proposals'
 import { Route as AuthenticatedToegangRouteImport } from './routes/_authenticated/toegang'
 import { Route as ApiBakenRouteImport } from './routes/api/baken'
+import { Route as ApiBakenSttRouteImport } from './routes/api/baken-stt'
+import { Route as ApiBakenTtsRouteImport } from './routes/api/baken-tts'
 import { Route as AuthenticatedTargetIdRouteImport } from './routes/_authenticated/target.$id'
 import { Route as AuthenticatedTargetsNewRouteImport } from './routes/_authenticated/targets/new'
 import { Route as ApiPublicAgendaDoticsRouteImport } from './routes/api/public/agenda[.]ics'
@@ -91,6 +93,16 @@ const ApiBakenRoute = ApiBakenRouteImport.update({
   path: '/api/baken',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiBakenSttRoute = ApiBakenSttRouteImport.update({
+  id: '/api/baken-stt',
+  path: '/api/baken-stt',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiBakenTtsRoute = ApiBakenTtsRouteImport.update({
+  id: '/api/baken-tts',
+  path: '/api/baken-tts',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthenticatedTargetIdRoute = AuthenticatedTargetIdRouteImport.update({
   id: '/target/$id',
   path: '/target/$id',
@@ -149,6 +161,8 @@ export interface FileRoutesByFullPath {
   '/proposals': typeof AuthenticatedProposalsRoute
   '/toegang': typeof AuthenticatedToegangRoute
   '/api/baken': typeof ApiBakenRoute
+  '/api/baken-stt': typeof ApiBakenSttRoute
+  '/api/baken-tts': typeof ApiBakenTtsRoute
   '/target/$id': typeof AuthenticatedTargetIdRoute
   '/targets/new': typeof AuthenticatedTargetsNewRoute
   '/api/public/agenda.ics': typeof ApiPublicAgendaDoticsRoute
@@ -171,6 +185,8 @@ export interface FileRoutesByTo {
   '/proposals': typeof AuthenticatedProposalsRoute
   '/toegang': typeof AuthenticatedToegangRoute
   '/api/baken': typeof ApiBakenRoute
+  '/api/baken-stt': typeof ApiBakenSttRoute
+  '/api/baken-tts': typeof ApiBakenTtsRoute
   '/target/$id': typeof AuthenticatedTargetIdRoute
   '/targets/new': typeof AuthenticatedTargetsNewRoute
   '/api/public/agenda.ics': typeof ApiPublicAgendaDoticsRoute
@@ -195,6 +211,8 @@ export interface FileRoutesById {
   '/_authenticated/proposals': typeof AuthenticatedProposalsRoute
   '/_authenticated/toegang': typeof AuthenticatedToegangRoute
   '/api/baken': typeof ApiBakenRoute
+  '/api/baken-stt': typeof ApiBakenSttRoute
+  '/api/baken-tts': typeof ApiBakenTtsRoute
   '/_authenticated/target/$id': typeof AuthenticatedTargetIdRoute
   '/_authenticated/targets/new': typeof AuthenticatedTargetsNewRoute
   '/api/public/agenda.ics': typeof ApiPublicAgendaDoticsRoute
@@ -219,6 +237,8 @@ export interface FileRouteTypes {
     | '/proposals'
     | '/toegang'
     | '/api/baken'
+    | '/api/baken-stt'
+    | '/api/baken-tts'
     | '/target/$id'
     | '/targets/new'
     | '/api/public/agenda.ics'
@@ -241,6 +261,8 @@ export interface FileRouteTypes {
     | '/proposals'
     | '/toegang'
     | '/api/baken'
+    | '/api/baken-stt'
+    | '/api/baken-tts'
     | '/target/$id'
     | '/targets/new'
     | '/api/public/agenda.ics'
@@ -264,6 +286,8 @@ export interface FileRouteTypes {
     | '/_authenticated/proposals'
     | '/_authenticated/toegang'
     | '/api/baken'
+    | '/api/baken-stt'
+    | '/api/baken-tts'
     | '/_authenticated/target/$id'
     | '/_authenticated/targets/new'
     | '/api/public/agenda.ics'
@@ -280,6 +304,8 @@ export interface RootRouteChildren {
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   LoginRoute: typeof LoginRoute
   ApiBakenRoute: typeof ApiBakenRoute
+  ApiBakenSttRoute: typeof ApiBakenSttRoute
+  ApiBakenTtsRoute: typeof ApiBakenTtsRoute
   ApiPublicAgendaDoticsRoute: typeof ApiPublicAgendaDoticsRoute
   ApiPublicCheckRoute: typeof ApiPublicCheckRoute
   ApiPublicDailyRollupRoute: typeof ApiPublicDailyRollupRoute
@@ -373,6 +399,20 @@ declare module '@tanstack/react-router' {
       path: '/api/baken'
       fullPath: '/api/baken'
       preLoaderRoute: typeof ApiBakenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/baken-stt': {
+      id: '/api/baken-stt'
+      path: '/api/baken-stt'
+      fullPath: '/api/baken-stt'
+      preLoaderRoute: typeof ApiBakenSttRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/baken-tts': {
+      id: '/api/baken-tts'
+      path: '/api/baken-tts'
+      fullPath: '/api/baken-tts'
+      preLoaderRoute: typeof ApiBakenTtsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_authenticated/target/$id': {
@@ -475,6 +515,8 @@ const rootRouteChildren: RootRouteChildren = {
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   LoginRoute: LoginRoute,
   ApiBakenRoute: ApiBakenRoute,
+  ApiBakenSttRoute: ApiBakenSttRoute,
+  ApiBakenTtsRoute: ApiBakenTtsRoute,
   ApiPublicAgendaDoticsRoute: ApiPublicAgendaDoticsRoute,
   ApiPublicCheckRoute: ApiPublicCheckRoute,
   ApiPublicDailyRollupRoute: ApiPublicDailyRollupRoute,

@@ -21,6 +21,7 @@ export type TargetLite = {
   name: string;
   kind: string;
   level: "rustig" | "aandacht" | "actie" | "onbekend";
+  shot: string | null;
 };
 export type TodayData = {
   level: "rustig" | "aandacht" | "actie";
@@ -33,6 +34,7 @@ export type SiteData = {
   id: string;
   name: string;
   url: string;
+  shot: string | null;
   level: TargetLite["level"];
   latency: { t: string; ms: number; fails: number }[];
   visitors: { day: string; v: number; pv: number }[];
@@ -91,7 +93,7 @@ async function loadTargetsWithLevels(): Promise<{
   const [{ data: targets }, { data: incidents }] = await Promise.all([
     supabase
       .from("watch_targets")
-      .select("id, name, kind, status")
+      .select("id, name, kind, status, screenshot_url")
       .eq("enabled", true)
       .order("name"),
     supabase
@@ -116,6 +118,7 @@ async function loadTargetsWithLevels(): Promise<{
       name: t.name,
       kind: t.kind,
       level: levelOf(t.id, t.status),
+      shot: t.screenshot_url,
     })),
     issues: active.map((i) => ({
       target: (i.watch_targets as { name?: string } | null)?.name ?? "",
@@ -179,6 +182,7 @@ async function loadSite(t: TargetLite): Promise<SiteData> {
     id: t.id,
     name: t.name,
     url: target?.url ?? "",
+    shot: t.shot,
     level: t.level,
     latency: (lat.data ?? [])
       .filter((r) => r.target_id === t.id)
@@ -409,68 +413,144 @@ export function sayToday(d: TodayData): BakenReply {
   };
 }
 
-export async function greet(): Promise<BakenReply> {
-  return sayToday(await loadToday());
+// ---------- taalmodel: maakt van de cijfers een natuurlijk antwoord ----------
+
+let caps: Promise<{ model: string | null; voice: string | null }> | null = null;
+export function capabilities() {
+  caps ??= fetch("/api/baken")
+    .then((r) => (r.ok ? r.json() : { model: null, voice: null }))
+    .catch(() => ({ model: null, voice: null }));
+  return caps;
 }
 
-/** Vrije vraag: lokaal waar het kan, anders het model (als dat beschikbaar is). */
+export async function authHeader(): Promise<Record<string, string>> {
+  const { data } = await supabase.auth.getSession();
+  return { Authorization: `Bearer ${data.session?.access_token ?? ""}` };
+}
+
+function facts(scenes: Scene[]) {
+  return scenes.map((s) => {
+    switch (s.kind) {
+      case "vandaag":
+        return {
+          beeld: "sterrenstelsel van alle sites",
+          toestand: s.data.level,
+          sites: s.data.targets.length,
+          rustig: s.data.targets.filter((t) => t.level === "rustig").length,
+          problemen: s.data.issues.slice(0, 6),
+          wachtOpGo: s.data.waiting,
+          volgendeDeadline: s.data.nextDeadline && {
+            titel: s.data.nextDeadline.title,
+            over: relDays(s.data.nextDeadline.days),
+          },
+        };
+      case "site": {
+        const ms = s.data.latency.map((r) => r.ms).sort((a, b) => a - b);
+        return {
+          beeld: `kaart van ${s.data.name} met schermafbeelding, reactietijd en bezoekers`,
+          site: s.data.name,
+          toestand: s.data.level,
+          problemen: s.data.issues.map((i) => i.title),
+          reactietijdMediaanMs: ms[Math.floor(ms.length / 2)] ?? null,
+          mislukteMetingen7d: s.data.latency.reduce((a, r) => a + r.fails, 0),
+          bezoekers7d: s.data.visitors.slice(-7).reduce((a, r) => a + r.v, 0),
+          bezoekersVorigeWeek: s.data.visitors.slice(0, -7).reduce((a, r) => a + r.v, 0),
+        };
+      }
+      case "voorstellen":
+        return {
+          beeld: "lijst voorstellen die op go wachten",
+          voorstellen: s.data.map((p) => p.title),
+        };
+      case "credits":
+        return {
+          beeld: "balken rekentijd per project (seconden per dag)",
+          projecten: s.data.slice(0, 6),
+        };
+      case "agenda":
+        return {
+          beeld: "tijdlijn met deadlines",
+          deadlines: s.data
+            .slice(0, 6)
+            .map((a) => ({ titel: a.title, wanneer: relDays(a.days), ernst: a.severity })),
+        };
+      case "bezoekers":
+        return { beeld: "ranking bezoekers per site deze week", sites: s.data.slice(0, 6) };
+      case "vondsten":
+        return { beeld: "vondsten bij partners", vondsten: s.data.slice(0, 6) };
+    }
+  });
+}
+
+async function phrase(
+  q: string,
+  history: { role: "user" | "assistant"; content: string }[],
+  local: BakenReply | null,
+): Promise<{ say: string; show: string[] } | null> {
+  try {
+    const context: Record<string, unknown> = { beeldEnFeiten: local ? facts(local.scenes) : [] };
+    if (!local?.scenes.length) {
+      const [t, c, a, p] = await Promise.all([
+        loadToday(),
+        loadCredits(),
+        loadAgenda(),
+        loadProposals(),
+      ]);
+      context.achtergrond = facts([
+        { kind: "vandaag", data: t },
+        { kind: "credits", data: c },
+        { kind: "agenda", data: a },
+        { kind: "voorstellen", data: p },
+      ]);
+    }
+    const res = await fetch("/api/baken", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...(await authHeader()) },
+      body: JSON.stringify({ question: q, history: history.slice(-6), context }),
+    });
+    if (!res.ok) return null;
+    const j = (await res.json()) as { say?: string; show?: string[] };
+    return j.say ? { say: j.say, show: j.show ?? [] } : null;
+  } catch {
+    return null;
+  }
+}
+
+async function sceneFor(kind: string): Promise<Scene | null> {
+  if (kind === "vandaag") return { kind, data: await loadToday() };
+  if (kind === "credits") return { kind, data: await loadCredits() };
+  if (kind === "agenda") return { kind, data: await loadAgenda() };
+  if (kind === "voorstellen") return { kind, data: await loadProposals() };
+  if (kind === "bezoekers") return { kind, data: await loadVisitors() };
+  if (kind === "vondsten") return { kind, data: await loadFindings() };
+  return null;
+}
+
+/** Elke vraag: de cijfers en beelden komen lokaal, de woorden van het taalmodel (als dat er is). */
 export async function ask(
   q: string,
   history: { role: "user" | "assistant"; content: string }[],
 ): Promise<BakenReply> {
-  const local = await answerLocally(q);
-  if (local) return local;
-  try {
-    const [{ data: session }, todayData, credits, agenda, proposals] = await Promise.all([
-      supabase.auth.getSession(),
-      loadToday(),
-      loadCredits(),
-      loadAgenda(),
-      loadProposals(),
-    ]);
-    const res = await fetch("/api/baken", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${session.session?.access_token ?? ""}`,
-      },
-      body: JSON.stringify({
-        question: q,
-        history: history.slice(-6),
-        context: {
-          vandaag: {
-            niveau: todayData.level,
-            problemen: todayData.issues,
-            wachtOpGo: todayData.waiting,
-          },
-          sites: todayData.targets.map((t) => ({ naam: t.name, toestand: t.level })),
-          credits: credits.slice(0, 6),
-          agenda: agenda
-            .slice(0, 8)
-            .map((a) => ({ titel: a.title, datum: a.due_date, ernst: a.severity })),
-          voorstellen: proposals.map((p) => p.title),
-        },
-      }),
-    });
-    if (res.ok) {
-      const j = (await res.json()) as { say?: string; show?: string[] };
-      if (j.say) {
-        const scenes: Scene[] = [];
-        for (const s of j.show ?? []) {
-          if (s === "vandaag") scenes.push({ kind: "vandaag", data: todayData });
-          if (s === "credits") scenes.push({ kind: "credits", data: credits });
-          if (s === "agenda") scenes.push({ kind: "agenda", data: agenda });
-          if (s === "voorstellen") scenes.push({ kind: "voorstellen", data: proposals });
-        }
-        return { say: j.say, scenes, source: "model" };
-      }
+  const local = await answerLocally(q).catch(() => null);
+  const { model } = await capabilities();
+  if (model) {
+    const m = await phrase(q, history, local);
+    if (m) {
+      let scenes = local?.scenes ?? [];
+      if (!scenes.length)
+        scenes = (await Promise.all(m.show.slice(0, 2).map(sceneFor))).filter(Boolean) as Scene[];
+      return { say: m.say, scenes, source: "model" };
     }
-  } catch {
-    /* val terug op lokaal */
   }
-  return {
-    say: "Dat kan ik nog niet beantwoorden. Vraag me naar vandaag, een site, voorstellen, de agenda, bezoekers, partners of credits.",
-    scenes: [],
-    source: "lokaal",
-  };
+  return (
+    local ?? {
+      say: "Dat weet ik nog niet. Vraag me naar vandaag, een site, voorstellen, de agenda, bezoekers, partners of credits.",
+      scenes: [],
+      source: "lokaal",
+    }
+  );
+}
+
+export async function greet(): Promise<BakenReply> {
+  return ask("Geef me in het kort de stand van vandaag.", []);
 }

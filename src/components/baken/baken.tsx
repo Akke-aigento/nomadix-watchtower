@@ -10,6 +10,7 @@ import {
 import { ArrowUp, Mic, MicOff, Volume2, VolumeX, X } from "lucide-react";
 import { ask, greet, type BakenReply } from "./engine";
 import { SceneView } from "./scenes";
+import { voice } from "./voice";
 import { ProposalSheet } from "@/components/proposal-detail";
 import { cn } from "@/lib/utils";
 
@@ -143,39 +144,6 @@ export function BakenCore({
   );
 }
 
-// ---------- spraak ----------
-
-type Recog = {
-  lang: string;
-  interimResults: boolean;
-  continuous: boolean;
-  start: () => void;
-  stop: () => void;
-  onresult:
-    | ((e: {
-        results: ArrayLike<ArrayLike<{ transcript: string }> & { isFinal: boolean }>;
-      }) => void)
-    | null;
-  onend: (() => void) | null;
-  onerror: (() => void) | null;
-};
-
-function getRecognizer(): Recog | null {
-  if (typeof window === "undefined") return null;
-  const W = window as unknown as {
-    SpeechRecognition?: new () => Recog;
-    webkitSpeechRecognition?: new () => Recog;
-  };
-  const C = W.SpeechRecognition ?? W.webkitSpeechRecognition;
-  return C ? new C() : null;
-}
-
-function pickVoice(): SpeechSynthesisVoice | null {
-  if (typeof window === "undefined" || !window.speechSynthesis) return null;
-  const vs = window.speechSynthesis.getVoices();
-  return vs.find((v) => v.lang === "nl-BE") ?? vs.find((v) => v.lang.startsWith("nl")) ?? null;
-}
-
 // ---------- de ervaring ----------
 
 function BakenExperience({ onClose }: { onClose: () => void }) {
@@ -186,35 +154,71 @@ function BakenExperience({ onClose }: { onClose: () => void }) {
   const [sound, setSound] = useState(true);
   const [listening, setListening] = useState(false);
   const [proposal, setProposal] = useState<string | null>(null);
-  const recog = useRef<Recog | null>(null);
   const idRef = useRef(1);
   const scroller = useRef<HTMLDivElement>(null);
-  const canListen = typeof window !== "undefined" && !!getRecognizer();
+  const soundRef = useRef(sound);
+  soundRef.current = sound;
+  // Gespreksmodus: na elk gesproken antwoord luistert Baken meteen opnieuw.
+  const convo = useRef(false);
+  const [convoOn, setConvoOn] = useState(false);
+  const canListen = typeof window !== "undefined" && voice.canListen();
+  const sendRef = useRef<(q: string) => void>(() => {});
+
+  const say = useCallback((text: string) => {
+    setTurns((t) => [
+      ...t,
+      {
+        id: idRef.current++,
+        role: "baken",
+        text,
+        reply: { say: text, scenes: [], source: "lokaal" },
+      },
+    ]);
+  }, []);
+
+  const startListening = useCallback(() => {
+    setListening(true);
+    setMood("luistert");
+    void voice.listen({
+      level: setLevel,
+      heard: (t) => {
+        setListening(false);
+        sendRef.current(t);
+      },
+      done: () => {
+        setListening(false);
+        setMood("rust");
+        convo.current = false;
+        setConvoOn(false);
+      },
+      error: (m) => {
+        setListening(false);
+        setMood("rust");
+        convo.current = false;
+        setConvoOn(false);
+        say(m);
+      },
+    });
+  }, [say]);
 
   const speak = useCallback(
     (text: string) => {
-      if (!sound || typeof window === "undefined" || !window.speechSynthesis) {
+      if (!soundRef.current) {
         setMood("rust");
+        if (convo.current) startListening();
         return;
       }
-      window.speechSynthesis.cancel();
-      const u = new SpeechSynthesisUtterance(text);
-      const v = pickVoice();
-      if (v) u.voice = v;
-      u.lang = v?.lang ?? "nl-BE";
-      u.rate = 1.04;
-      u.onstart = () => setMood("praat");
-      u.onboundary = () => {
-        setLevel(0.6 + Math.random() * 0.4);
-        window.setTimeout(() => setLevel(0.15), 120);
-      };
-      u.onend = () => {
-        setLevel(0);
-        setMood("rust");
-      };
-      window.speechSynthesis.speak(u);
+      void voice.speak(text, {
+        start: () => setMood("praat"),
+        level: setLevel,
+        end: () => {
+          setLevel(0);
+          setMood("rust");
+          if (convo.current) startListening();
+        },
+      });
     },
-    [sound],
+    [startListening],
   );
 
   const push = useCallback(
@@ -234,8 +238,7 @@ function BakenExperience({ onClose }: { onClose: () => void }) {
       .catch(() => alive && setMood("rust"));
     return () => {
       alive = false;
-      window.speechSynthesis?.cancel();
-      recog.current?.stop();
+      voice.stop();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -250,7 +253,7 @@ function BakenExperience({ onClose }: { onClose: () => void }) {
     const text = q.trim();
     if (!text) return;
     setInput("");
-    window.speechSynthesis?.cancel();
+    voice.stop();
     const history = turns.map((t) => ({
       role: t.role === "user" ? ("user" as const) : ("assistant" as const),
       content: t.text,
@@ -267,42 +270,32 @@ function BakenExperience({ onClose }: { onClose: () => void }) {
       });
     }
   };
+  sendRef.current = (q) => void send(q);
 
+  /** Microfoonknop: één vraag inspreken. */
   const toggleMic = () => {
+    voice.unlock();
     if (listening) {
-      recog.current?.stop();
+      voice.stop();
       return;
     }
-    const r = getRecognizer();
-    if (!r) return;
-    window.speechSynthesis?.cancel();
-    r.lang = "nl-BE";
-    r.interimResults = true;
-    r.continuous = false;
-    let finalText = "";
-    r.onresult = (e) => {
-      let txt = "";
-      for (let i = 0; i < e.results.length; i++) {
-        txt += e.results[i][0].transcript;
-        if (e.results[i].isFinal) finalText = txt;
-      }
-      setInput(txt);
-      setLevel(0.4 + Math.random() * 0.6);
-    };
-    r.onend = () => {
-      setListening(false);
-      setLevel(0);
-      if (finalText) void send(finalText);
-      else setMood("rust");
-    };
-    r.onerror = () => {
+    startListening();
+  };
+
+  /** Tik op het baken: gespreksmodus aan of uit (luisteren → antwoorden → weer luisteren). */
+  const toggleConvo = () => {
+    voice.unlock();
+    if (convo.current) {
+      convo.current = false;
+      setConvoOn(false);
+      voice.stop();
       setListening(false);
       setMood("rust");
-    };
-    recog.current = r;
-    setListening(true);
-    setMood("luistert");
-    r.start();
+      return;
+    }
+    convo.current = true;
+    setConvoOn(true);
+    startListening();
   };
 
   const last = [...turns].reverse().find((t) => t.role === "baken");
@@ -342,7 +335,7 @@ function BakenExperience({ onClose }: { onClose: () => void }) {
         <button
           type="button"
           onClick={() => {
-            if (sound) window.speechSynthesis?.cancel();
+            if (sound) voice.stop();
             setSound((s) => !s);
           }}
           className="flex size-10 items-center justify-center rounded-full border border-white/10 bg-white/[0.06] text-white/80"
@@ -368,13 +361,18 @@ function BakenExperience({ onClose }: { onClose: () => void }) {
           <div className="flex flex-col items-center pt-2 pb-4">
             <button
               type="button"
-              onClick={canListen ? toggleMic : undefined}
+              onClick={canListen ? toggleConvo : undefined}
               className="w-44 transition-all duration-500 md:w-56"
               aria-label="Praat met Baken"
             >
               <BakenCore mood={mood} level={level} />
             </button>
             <div className="mt-1 text-sm font-semibold tracking-wide text-white/70">{label}</div>
+            {canListen && (
+              <div className="mt-0.5 text-[12px] text-white/40">
+                {convoOn ? "Gesprek loopt · tik om te stoppen" : "Tik op het baken om te praten"}
+              </div>
+            )}
           </div>
 
           <div className="space-y-5">
@@ -504,9 +502,23 @@ export function BakenProvider({ children }: { children: ReactNode }) {
     };
   }, [open]);
   return (
-    <Ctx.Provider value={{ open: () => setOpen(true) }}>
+    <Ctx.Provider
+      value={{
+        open: () => {
+          voice.unlock(); // binnen de tik, anders blijft iOS stil
+          setOpen(true);
+        },
+      }}
+    >
       {children}
-      {open && <BakenExperience onClose={() => setOpen(false)} />}
+      {open && (
+        <BakenExperience
+          onClose={() => {
+            voice.stop();
+            setOpen(false);
+          }}
+        />
+      )}
     </Ctx.Provider>
   );
 }

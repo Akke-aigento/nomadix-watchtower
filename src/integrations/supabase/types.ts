@@ -616,6 +616,7 @@ export type Database = {
       }
       watch_targets: {
         Row: {
+          screenshot_url: string | null
           sellqo_tenant_id: string | null
           checks: Json
           created_at: string
@@ -634,6 +635,7 @@ export type Database = {
           url: string
         }
         Insert: {
+          screenshot_url?: string | null
           sellqo_tenant_id?: string | null
           checks?: Json
           created_at?: string
@@ -652,6 +654,7 @@ export type Database = {
           url: string
         }
         Update: {
+          screenshot_url?: string | null
           sellqo_tenant_id?: string | null
           checks?: Json
           created_at?: string

@@ -139,6 +139,24 @@ function SiteScene({ d, onClose }: { d: SiteData; onClose: () => void }) {
     [...d.latency].map((r) => r.ms).sort((a, b) => a - b)[Math.floor(d.latency.length / 2)] ?? 0;
   return (
     <div className="space-y-3">
+      {d.shot && (
+        <div className="rise relative overflow-hidden rounded-[24px] border border-white/10">
+          <img
+            src={d.shot}
+            alt={`Schermafbeelding van ${d.name}`}
+            className="aspect-[16/10] w-full object-cover object-top"
+            loading="eager"
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-[#050d19] via-[#050d19]/10 to-transparent" />
+          <div className="absolute inset-x-0 bottom-0 flex items-center gap-2 p-4">
+            <span
+              className="size-2.5 rounded-full"
+              style={{ background: LEVEL[d.level], boxShadow: `0 0 12px ${LEVEL[d.level]}` }}
+            />
+            <span className="text-lg font-bold text-white">{d.name}</span>
+          </div>
+        </div>
+      )}
       <Card>
         <div className="flex items-center gap-3">
           <span
@@ -229,6 +247,42 @@ function SiteScene({ d, onClose }: { d: SiteData; onClose: () => void }) {
   );
 }
 
+/** Galerij: echte schermafbeeldingen van de sites, wie aandacht vraagt eerst. */
+function Gallery({ data, onClose }: { data: TodayData; onClose: () => void }) {
+  const order = { actie: 0, aandacht: 1, onbekend: 2, rustig: 3 } as const;
+  const list = data.targets.filter((t) => t.shot).sort((a, b) => order[a.level] - order[b.level]);
+  if (!list.length) return null;
+  return (
+    <div className="-mx-4 flex snap-x gap-3 overflow-x-auto px-4 pb-2">
+      {list.map((t, i) => (
+        <Link
+          key={t.id}
+          to="/target/$id"
+          params={{ id: t.id }}
+          onClick={onClose}
+          className="rise relative w-[62%] max-w-[260px] shrink-0 snap-start overflow-hidden rounded-[20px] border border-white/10"
+          style={{ animationDelay: `${i * 70}ms` }}
+        >
+          <img
+            src={t.shot!}
+            alt=""
+            className="aspect-[16/10] w-full object-cover object-top"
+            loading="lazy"
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-[#050d19] via-transparent to-transparent" />
+          <div className="absolute inset-x-0 bottom-0 flex items-center gap-2 p-3">
+            <span
+              className="size-2 shrink-0 rounded-full"
+              style={{ background: LEVEL[t.level], boxShadow: `0 0 10px ${LEVEL[t.level]}` }}
+            />
+            <span className="truncate text-sm font-semibold text-white">{t.name}</span>
+          </div>
+        </Link>
+      ))}
+    </div>
+  );
+}
+
 export function SceneView({
   scene,
   onClose,
@@ -244,6 +298,7 @@ export function SceneView({
       return (
         <div className="space-y-3">
           <Constellation data={d} onClose={onClose} />
+          <Gallery data={d} onClose={onClose} />
           {d.issues.length > 0 && (
             <Card>
               <ul className="space-y-2">

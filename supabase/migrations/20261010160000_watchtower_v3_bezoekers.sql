@@ -59,3 +59,6 @@ BEGIN
   END LOOP;
   RETURN n;
 END $$;
+
+-- Schermafbeelding per site (Lovable latest_screenshot_url), voor Baken en de sitepagina.
+ALTER TABLE public.watch_targets ADD COLUMN IF NOT EXISTS screenshot_url text NULL;
