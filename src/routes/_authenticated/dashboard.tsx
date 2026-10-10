@@ -12,6 +12,7 @@ import { FINDING_KIND, engineLine, useEngineHealth } from "@/components/findings
 import { IncidentsWeekly, LatencyGrid } from "@/components/charts";
 import { ProposalRow, ProposalSheet } from "@/components/proposal-detail";
 import { RadarOrb } from "@/components/radar-orb";
+import { VisitorsOverview } from "@/components/site-analytics";
 import { Coins } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
@@ -377,6 +378,8 @@ function DashboardPage() {
         <LatencyGrid
           targets={targets.filter((t) => t.kind === "platform" || t.kind === "storefront")}
         />
+
+        <VisitorsOverview targets={targets} />
 
         <IncidentsWeekly />
 

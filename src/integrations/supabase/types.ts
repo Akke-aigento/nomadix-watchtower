@@ -701,6 +701,66 @@ export type Database = {
         }
         Relationships: []
       }
+      site_analytics_daily: {
+        Row: {
+          target_id: string
+          day: string
+          visitors: number
+          pageviews: number
+          bounce_rate: number | null
+          session_min: number | null
+          fetched_at: string
+        }
+        Insert: {
+          target_id: string
+          day: string
+          visitors?: number
+          pageviews?: number
+          bounce_rate?: number | null
+          session_min?: number | null
+          fetched_at?: string
+        }
+        Update: {
+          target_id?: string
+          day?: string
+          visitors?: number
+          pageviews?: number
+          bounce_rate?: number | null
+          session_min?: number | null
+          fetched_at?: string
+        }
+        Relationships: []
+      }
+      site_analytics_lists: {
+        Row: {
+          target_id: string
+          period_days: number
+          pages: Json
+          sources: Json
+          devices: Json
+          countries: Json
+          fetched_at: string
+        }
+        Insert: {
+          target_id: string
+          period_days: number
+          pages?: Json
+          sources?: Json
+          devices?: Json
+          countries?: Json
+          fetched_at?: string
+        }
+        Update: {
+          target_id?: string
+          period_days?: number
+          pages?: Json
+          sources?: Json
+          devices?: Json
+          countries?: Json
+          fetched_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       credit_latest: {

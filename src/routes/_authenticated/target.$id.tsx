@@ -1,3 +1,4 @@
+import { SiteAnalytics } from "@/components/site-analytics";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
@@ -222,7 +223,7 @@ function TargetDetailPage() {
 
   return (
     <AppShell>
-      <div className="mx-auto max-w-3xl space-y-8">
+      <div className="mx-auto max-w-4xl space-y-8">
         <header className="space-y-3 pt-1">
           <Link
             to="/dashboard"
@@ -251,6 +252,8 @@ function TargetDetailPage() {
         </header>
 
         <Promises targetId={target.id} checks={enabledCheckKeys} latest={latestPerCheck} />
+
+        <SiteAnalytics targetId={target.id} />
 
         <section className="space-y-3">
           <h2 className="text-tech text-xs text-muted-foreground">Incidenten</h2>
