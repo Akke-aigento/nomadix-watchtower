@@ -8,6 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { IncidentList, isAcknowledged, useIncidents } from "@/components/incidents";
 import { CategoryBadge, formatDateTime, relativeTime } from "@/components/watchtower";
 import { cn } from "@/lib/utils";
+import { FINDING_KIND, engineLine, useEngineHealth } from "@/components/findings";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
   head: () => ({
@@ -90,6 +91,22 @@ function DashboardPage() {
     },
     refetchInterval: 120_000,
   });
+  const findingsQuery = useQuery({
+    queryKey: ["findings", "open"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("findings")
+        .select("id, title, kind, severity, impact, integration_key, bundle, status, detected_at")
+        .eq("status", "nieuw")
+        .neq("impact", "raakt_ons_niet")
+        .order("detected_at", { ascending: false });
+      if (error) throw error;
+      return data ?? [];
+    },
+    refetchInterval: 120_000,
+  });
+  const engine = useEngineHealth();
+  const eng = engineLine(engine.data);
   const incidentsQuery = useIncidents();
   const targets = targetsQuery.data ?? [];
   const incidents = incidentsQuery.data ?? [];
@@ -197,6 +214,24 @@ function DashboardPage() {
           </section>
         )}
 
+        {(findingsQuery.data ?? []).length > 0 && (
+          <section className="space-y-3">
+            <h2 className="text-tech text-xs text-muted-foreground">Gevonden bij partners — wordt uitgewerkt tot pakket</h2>
+            <div className="panel divide-y divide-border">
+              {(findingsQuery.data ?? []).map((f) => (
+                <Link key={f.id} to="/koppelingen" className="flex items-center gap-3 px-4 py-3 text-sm hover:bg-secondary/40">
+                  <span
+                    className="inline-block size-2 shrink-0 rounded-full"
+                    style={{ background: f.severity === "actie" ? "var(--crit)" : f.severity === "aandacht" ? "var(--warn)" : "var(--muted-foreground)" }}
+                  />
+                  <span className="min-w-0 flex-1 truncate">{f.title}</span>
+                  <span className="text-tech shrink-0 text-[10px] text-muted-foreground">{FINDING_KIND[f.kind] ?? f.kind}</span>
+                </Link>
+              ))}
+            </div>
+          </section>
+        )}
+
         {proposals.length > 0 && (
           <section className="space-y-3">
             <h2 className="text-tech text-xs text-muted-foreground">Wacht op jouw go</h2>
@@ -299,6 +334,11 @@ function DashboardPage() {
                 ? `${monitor.length} meting(en) lukken al een tijd niet`
                 : "alle metingen in orde"}
             </span>
+          </div>
+          <div className="flex justify-between gap-4">
+            <Link to="/koppelingen" className="truncate hover:text-foreground" style={{ color: eng.warn ? "var(--warn)" : undefined }}>
+              Radar · {eng.text}
+            </Link>
           </div>
           <button
             type="button"

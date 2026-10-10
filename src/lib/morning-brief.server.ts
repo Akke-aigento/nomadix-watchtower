@@ -275,6 +275,30 @@ export async function morningBrief(opts: { dryRun?: boolean; week?: boolean } = 
     sections.push("komt_eraan");
   }
 
+  // Gevonden bij partners: alles wat de radar sinds gisteren vond, plus open vondsten zonder pakket.
+  const { data: findingRows } = await supabaseAdmin
+    .from("findings")
+    .select("title, kind, impact, severity, status, bundle, detected_at, source_url")
+    .or(`detected_at.gte.${dayAgo},and(status.eq.nieuw,impact.neq.raakt_ons_niet)`)
+    .order("detected_at", { ascending: false });
+  if ((findingRows ?? []).length) {
+    const tag = (f: { impact: string; status: string; bundle: string | null }) =>
+      f.status === "pakket" ? ["Pakket", C.rustig] : f.impact === "raakt_ons_niet" ? ["Geen impact", C.muted] : f.impact === "onzeker" ? ["Onzeker", C.aandacht] : ["Raakt ons", C.actieText];
+    blocks.push(
+      card(
+        label("Gevonden bij partners") +
+          (findingRows ?? [])
+            .map((f) => {
+              const [t, color] = tag(f);
+              return `<div style="font:400 15px/1.5 Arial,sans-serif;color:${C.body};margin-bottom:6px"><span style="display:inline-block;width:96px;font-weight:600;color:${color}">${t}</span><a href="${esc(f.source_url)}" style="color:${C.body}">${esc(f.title)}</a></div>`;
+            })
+            .join("") +
+          `<div style="font:400 13px/1.5 Arial,sans-serif;color:${C.muted};margin-top:8px"><a href="${DASHBOARD_URL}/koppelingen" style="color:${C.muted}">Alle koppelingen en vondsten</a></div>`,
+      ),
+    );
+    sections.push("vondsten");
+  }
+
   // Wacht op jouw go
   if ((proposals ?? []).length) {
     blocks.push(
@@ -318,6 +342,10 @@ export async function morningBrief(opts: { dryRun?: boolean; week?: boolean } = 
   } else {
     foot.push(`Zelfcontrole: metingen in orde${unknownCount ? ` (${unknownCount} losse meetfout(en), telt niet mee)` : ""}`);
   }
+
+  const { data: engine } = await supabaseAdmin.rpc("wt_engine_health");
+  const { engineLine } = await import("@/lib/engine");
+  if (engine) foot.push(`Radar: ${esc(engineLine(engine as never).text)}`);
 
   const subjectLevel =
     level === "actie"

@@ -135,6 +135,69 @@ export type Database = {
           },
         ]
       }
+      findings: {
+        Row: {
+          id: string
+          fingerprint: string
+          integration_key: string | null
+          kind: string
+          title: string
+          summary: string
+          analysis: string | null
+          impact: string
+          severity: string
+          affected_tenants: number | null
+          source_url: string
+          source_published: string | null
+          effective_date: string | null
+          status: string
+          bundle: string | null
+          detected_by: string
+          detected_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          fingerprint: string
+          integration_key?: string | null
+          kind: string
+          title: string
+          summary: string
+          analysis?: string | null
+          impact?: string
+          severity?: string
+          affected_tenants?: number | null
+          source_url: string
+          source_published?: string | null
+          effective_date?: string | null
+          status?: string
+          bundle?: string | null
+          detected_by?: string
+          detected_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          fingerprint?: string
+          integration_key?: string | null
+          kind?: string
+          title?: string
+          summary?: string
+          analysis?: string | null
+          impact?: string
+          severity?: string
+          affected_tenants?: number | null
+          source_url?: string
+          source_published?: string | null
+          effective_date?: string | null
+          status?: string
+          bundle?: string | null
+          detected_by?: string
+          detected_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       integration_usages: {
         Row: {
           id: string
@@ -144,6 +207,7 @@ export type Database = {
           version: string
           occurrences: number
           scanned_at: string
+          kind: string
         }
         Insert: {
           id?: string
@@ -153,6 +217,7 @@ export type Database = {
           version?: string
           occurrences?: number
           scanned_at?: string
+          kind?: string
         }
         Update: {
           id?: string
@@ -162,6 +227,7 @@ export type Database = {
           version?: string
           occurrences?: number
           scanned_at?: string
+          kind?: string
         }
         Relationships: []
       }
@@ -190,6 +256,10 @@ export type Database = {
           upstream_checked_at: string | null
           radar_checked_at: string | null
           notes: string | null
+          pricing_url: string | null
+          review_days: number | null
+          radar_note: string | null
+          touchpoints: Json
         }
         Insert: {
           id?: string
@@ -215,6 +285,10 @@ export type Database = {
           upstream_checked_at?: string | null
           radar_checked_at?: string | null
           notes?: string | null
+          pricing_url?: string | null
+          review_days?: number | null
+          radar_note?: string | null
+          touchpoints?: Json
         }
         Update: {
           id?: string
@@ -240,6 +314,10 @@ export type Database = {
           upstream_checked_at?: string | null
           radar_checked_at?: string | null
           notes?: string | null
+          pricing_url?: string | null
+          review_days?: number | null
+          radar_note?: string | null
+          touchpoints?: Json
         }
         Relationships: []
       }
@@ -560,6 +638,20 @@ export type Database = {
         }
         Relationships: []
       }
+      radar_coverage: {
+        Row: {
+          key: string
+          name: string
+          partner: string
+          usage_state: string
+          risk: string
+          radar_checked_at: string | null
+          radar_note: string | null
+          review_days_effective: number
+          due: boolean
+        }
+        Relationships: []
+      }
     }
     Functions: {
       get_agenda_token: { Args: never; Returns: string }
@@ -568,6 +660,7 @@ export type Database = {
       get_vapid_private_jwk: { Args: never; Returns: string }
       is_watchtower_admin: { Args: never; Returns: boolean }
       wt_ingest_scan: { Args: { scan: Json }; Returns: Json }
+      wt_engine_health: { Args: never; Returns: Json }
       wt_daily_check_status: {
         Args: { p_target: string; p_days?: number }
         Returns: {

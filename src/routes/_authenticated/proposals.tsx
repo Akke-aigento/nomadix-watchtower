@@ -17,6 +17,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { FindingCard, type Finding } from "@/components/findings";
 
 /** De geplande Claude-taak draait om 07:54, 12:54 en 18:54 (Brussel). */
 function nextRunText(): string {
@@ -58,6 +59,15 @@ function ProposalsPage() {
         .order("created_at", { ascending: false });
       if (error) throw error;
       return data;
+    },
+  });
+
+  const findingsQuery = useQuery({
+    queryKey: ["findings", "bundled"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("findings").select("*").not("bundle", "is", null);
+      if (error) throw error;
+      return (data ?? []) as Finding[];
     },
   });
 
@@ -145,6 +155,15 @@ function ProposalsPage() {
                       Go voor heel het pakket
                     </Button>
                   )}
+                </div>
+              )}
+              {p.bundle && p.bundle !== ordered[i - 1]?.bundle && (
+                <div className="space-y-2">
+                  {(findingsQuery.data ?? [])
+                    .filter((f) => f.bundle === p.bundle)
+                    .map((f) => (
+                      <FindingCard key={f.id} f={f} className="bg-secondary/30" />
+                    ))}
                 </div>
               )}
               <article
