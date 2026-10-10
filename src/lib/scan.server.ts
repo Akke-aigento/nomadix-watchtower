@@ -14,7 +14,10 @@ import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import type { Json } from "@/integrations/supabase/types";
 import {
   checkDns,
+  checkDomain,
   checkFormSmoke,
+  hostOf,
+  supportsDomainCheck,
   checkHealth,
   checkHttp,
   checkSsl,
@@ -23,6 +26,7 @@ import {
 } from "@/lib/checks.server";
 import { checkName, decide, describe, isCheckDue, targetStatus, type Severity } from "@/lib/policy";
 import { anyDelivered, pushToAll } from "@/lib/notify.server";
+import { closeProposalsFor, ensureProposal } from "@/lib/proposals.server";
 
 export type { CheckOutcome, CheckStatus } from "@/lib/checks.server";
 
@@ -70,6 +74,7 @@ type Target = {
   form_smoke_url: string | null;
   health_url: string | null;
   health_token: string | null;
+  lovable_project_id: string | null;
   status: string;
 };
 
@@ -86,7 +91,7 @@ type Incident = {
 
 type RecentRow = { check_key: string; status: CheckStatus; measured_at: string; detail: Json };
 
-function enabledChecks(t: Target): string[] {
+export function enabledChecks(t: Target): string[] {
   const c = (t.checks ?? {}) as Record<string, boolean>;
   const list: string[] = [];
   if (c.http !== false) list.push("http");
@@ -94,6 +99,7 @@ function enabledChecks(t: Target): string[] {
   if (c.dns) list.push("dns");
   if (c.form_smoke && t.form_smoke_url) list.push("form_smoke");
   if (c.health && t.health_url) list.push("health");
+  if (c.domain !== false && supportsDomainCheck(hostOf(t.url))) list.push("domain");
   return list;
 }
 
@@ -109,6 +115,8 @@ function runCheck(t: Target, key: string): Promise<CheckOutcome> {
       return checkFormSmoke(t.form_smoke_url!);
     case "health":
       return checkHealth(t.health_url!, t.health_token);
+    case "domain":
+      return checkDomain(t.url);
     default:
       throw new Error(`onbekende check ${key}`);
   }
@@ -241,6 +249,7 @@ async function applyIncident(
       .update({ status: "resolved", resolved_at: nowIso, last_seen_at: nowIso })
       .eq("id", open.id);
     await addEvent(open.id, "resolved", `${checkName(outcome.check_key)} terug in orde`);
+    await closeProposalsFor(open.id);
     let mailed = false;
     if (open.severity === "actie" && open.notified_at) {
       mailed = (await notifyIncident(target, open.id, "resolved", open.title, "")).mailed;
@@ -262,6 +271,7 @@ async function applyIncident(
       .update({ severity, title, summary, detail: outcome.detail, last_seen_at: nowIso })
       .eq("id", open.id);
     if (changed) await addEvent(open.id, "severity", `${open.severity} → ${severity}: ${title}`);
+    if (severity !== "monitor") await ensureProposal(target, outcome, open.id);
     let notified_at = open.notified_at;
     if (changed && severity === "actie" && !open.notified_at && !isAcknowledged(open)) {
       const { mailed, pushed } = await notifyIncident(target, open.id, "open", title, summary);
@@ -292,6 +302,7 @@ async function applyIncident(
     return open;
   }
   await addEvent(created.id, "opened", title);
+  if (severity !== "monitor") await ensureProposal(target, outcome, created.id);
   let mailed = false;
   if (severity === "actie") {
     const res = await notifyIncident(target, created.id, "open", title, summary);

@@ -58,6 +58,34 @@ export async function fetchWithTimeout(
 
 export const HTTP_SLOW_MS = 5000;
 
+const ERROR_TITLE =
+  /\b(404|500|502|503|504)\b|not found|niet gevonden|application error|bad gateway|service unavailable|internal server error|something went wrong/i;
+/** Bewust specifiek: "Tuinaanleg & Onderhoud" is een dienst, geen onderhoudsmodus. */
+const MAINTENANCE_TITLE =
+  /tijdelijk (offline|niet beschikbaar|gesloten)|\boffline\b|maintenance mode|under maintenance|in onderhoud|wegens onderhoud|under construction|coming soon|binnenkort (online|beschikbaar)/i;
+const DEFAULT_TITLE = /^(lovable app|lovable generated project|vite \+ react( \+ ts)?|react app|untitled)$/i;
+
+export type ContentIssue = "error_page" | "maintenance" | "default_title" | "empty_page";
+
+/** Wat zegt de pagina zelf? 200 OK kan nog altijd een foutpagina zijn. */
+export function inspectHtml(html: string): { title: string | null; bytes: number; issue: ContentIssue | null } {
+  const m = html.match(/<title[^>]*>([^<]*)<\/title>/i);
+  const title = m
+    ? m[1]
+        .replace(/&amp;/g, "&")
+        .replace(/&#39;|&apos;/g, "'")
+        .replace(/&quot;/g, '"')
+        .trim()
+    : null;
+  const bytes = html.length;
+  let issue: ContentIssue | null = null;
+  if (title && ERROR_TITLE.test(title)) issue = "error_page";
+  else if (title && MAINTENANCE_TITLE.test(title)) issue = "maintenance";
+  else if (title && DEFAULT_TITLE.test(title)) issue = "default_title";
+  else if (bytes < 200) issue = "empty_page";
+  return { title, bytes, issue };
+}
+
 export async function checkHttp(url: string, fetcher: Fetcher = fetch): Promise<CheckOutcome> {
   const started = Date.now();
   try {
@@ -67,7 +95,28 @@ export async function checkHttp(url: string, fetcher: Fetcher = fetch): Promise<
     if (res.status >= 500 || res.status === 404 || res.status === 410) status = "fail";
     else if (res.status >= 400) status = "warn";
     else if (latency > HTTP_SLOW_MS) status = "warn";
-    return { check_key: "http", status, latency_ms: latency, detail: { http_status: res.status, url } };
+
+    let page: ReturnType<typeof inspectHtml> | null = null;
+    const type = res.headers.get("content-type") ?? "";
+    if (res.ok && type.includes("text/html")) {
+      try {
+        page = inspectHtml((await res.text()).slice(0, 200_000));
+        if (page.issue === "error_page" || page.issue === "empty_page") status = "fail";
+        else if ((page.issue === "maintenance" || page.issue === "default_title") && status === "ok") status = "warn";
+      } catch {
+        page = null;
+      }
+    }
+    return {
+      check_key: "http",
+      status,
+      latency_ms: latency,
+      detail: {
+        http_status: res.status,
+        url,
+        ...(page ? { title: page.title, bytes: page.bytes, content_issue: page.issue } : {}),
+      },
+    };
   } catch (e) {
     // De site zelf antwoordt niet (DNS, TLS, timeout): dat is de property.
     return {
@@ -215,6 +264,87 @@ export async function checkDns(url: string, fetcher: Fetcher = fetch): Promise<C
     };
   } catch (e) {
     return { check_key: "dns", status: "unknown", latency_ms: null, detail: { host, error: errMsg(e) } };
+  }
+}
+
+export async function mxRecords(domain: string, fetcher: Fetcher = fetch): Promise<string[]> {
+  const res = await fetchWithTimeout(
+    `https://cloudflare-dns.com/dns-query?name=${encodeURIComponent(domain)}&type=MX`,
+    10000,
+    { accept: "application/dns-json" },
+    fetcher,
+  );
+  if (!res.ok) throw new Error(`MX DoH status ${res.status}`);
+  const json = (await res.json()) as { Answer?: Array<{ type?: number; data?: string }> };
+  return (json.Answer ?? [])
+    .filter((a) => a.type === 15)
+    .map((a) => (a.data ?? "").split(" ").pop()!.replace(/\.$/, "").toLowerCase());
+}
+
+// ---------------------------------------------------------------- domein (RDAP)
+
+export const DOMAIN_WARN_DAYS = 14;
+export const DOMAIN_FAIL_DAYS = 3;
+
+/** Registrable domain (eenvoudig: laatste twee labels; genoeg voor .be/.com/.app/.nl). */
+export function registrableDomain(host: string): string {
+  return host.split(".").slice(-2).join(".");
+}
+
+/** TLD's waarvan de registry geen vervaldatum publiceert (DNS Belgium heeft geen RDAP). */
+const NO_RDAP_TLDS = new Set(["be"]);
+
+export function supportsDomainCheck(host: string): boolean {
+  if (host.endsWith(".lovable.app")) return false;
+  return !NO_RDAP_TLDS.has(host.split(".").pop() ?? "");
+}
+
+let bootstrap: Promise<Map<string, string>> | null = null;
+
+function rdapBootstrap(fetcher: Fetcher): Promise<Map<string, string>> {
+  if (!bootstrap) {
+    bootstrap = (async () => {
+      const res = await fetchWithTimeout("https://data.iana.org/rdap/dns.json", 15000, {}, fetcher);
+      if (!res.ok) throw new Error(`IANA bootstrap status ${res.status}`);
+      const json = (await res.json()) as { services: [string[], string[]][] };
+      const map = new Map<string, string>();
+      for (const [tlds, urls] of json.services) for (const t of tlds) map.set(t, urls[0]);
+      return map;
+    })().catch((e) => {
+      bootstrap = null;
+      throw e;
+    });
+  }
+  return bootstrap;
+}
+
+export async function checkDomain(url: string, fetcher: Fetcher = fetch): Promise<CheckOutcome> {
+  const domain = registrableDomain(hostOf(url));
+  const tld = domain.split(".").pop() ?? "";
+  try {
+    const base = (await rdapBootstrap(fetcher)).get(tld);
+    if (!base) throw new Error(`geen RDAP-server voor .${tld}`);
+    const res = await fetchWithTimeout(
+      `${base.replace(/\/$/, "")}/domain/${encodeURIComponent(domain)}`,
+      15000,
+      { accept: "application/rdap+json" },
+      fetcher,
+    );
+    if (!res.ok) throw new Error(`RDAP status ${res.status}`);
+    const json = (await res.json()) as { events?: Array<{ eventAction?: string; eventDate?: string }> };
+    const exp = json.events?.find((e) => e.eventAction === "expiration")?.eventDate;
+    if (!exp) throw new Error("geen vervaldatum in RDAP-antwoord");
+    const expiresAt = Date.parse(exp);
+    const daysLeft = Math.floor((expiresAt - Date.now()) / 86400000);
+    const status: CheckStatus = daysLeft < DOMAIN_FAIL_DAYS ? "fail" : daysLeft < DOMAIN_WARN_DAYS ? "warn" : "ok";
+    return {
+      check_key: "domain",
+      status,
+      latency_ms: null,
+      detail: { domain, days_left: daysLeft, expires_at: new Date(expiresAt).toISOString() },
+    };
+  } catch (e) {
+    return { check_key: "domain", status: "unknown", latency_ms: null, detail: { domain, error: errMsg(e) } };
   }
 }
 

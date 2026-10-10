@@ -22,6 +22,7 @@ export const CHECK_LABEL: Record<string, string> = {
   dns: "DNS",
   form_smoke: "Formulier",
   health: "Health",
+  domain: "Domein",
 };
 
 export const CATEGORY_LABEL: Record<string, string> = {
@@ -32,7 +33,9 @@ export const CATEGORY_LABEL: Record<string, string> = {
 
 export const PROPOSAL_STATUS_LABEL: Record<string, string> = {
   proposed: "Wacht op go",
-  approved: "Goedgekeurd",
+  approved: "Go gegeven",
+  in_progress: "Bezig",
+  failed: "Mislukt",
   rejected: "Afgewezen",
   done: "Uitgevoerd",
 };

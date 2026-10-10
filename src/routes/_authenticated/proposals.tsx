@@ -18,6 +18,13 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
+/** De geplande Claude-taak draait om 08:00, 13:00 en 19:00 (Brussel). */
+function nextRunText(): string {
+  const hour = Number(new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/Brussels", hour: "2-digit", hour12: false }).format(new Date()));
+  const next = [8, 13, 19].find((h) => h > hour);
+  return next ? `Claude pakt dit op om ${next}:00` : "Claude pakt dit morgen om 8:00 op";
+}
+
 export const Route = createFileRoute("/_authenticated/proposals")({
   head: () => ({
     meta: [
@@ -121,9 +128,16 @@ function ProposalsPage() {
                 </div>
                 <h2 className="mt-2 font-medium">{p.title}</h2>
                 <p className="mt-1 text-sm text-muted-foreground">{p.description}</p>
-                <p className="mt-2 text-xs text-muted-foreground">
-                  <span className="text-tech">Actie:</span> {p.proposed_action}
-                </p>
+                <pre className="mt-3 whitespace-pre-wrap rounded-lg bg-secondary/60 p-3 font-mono text-xs leading-relaxed text-foreground/90">
+                  {p.proposed_action}
+                </pre>
+                {p.result && (
+                  <p className="mt-3 rounded-lg border border-border p-3 text-sm">
+                    <span className="text-tech text-[10px] text-muted-foreground">Resultaat</span>
+                    <br />
+                    {p.result}
+                  </p>
+                )}
                 {p.status === "proposed" && (
                   <div className="mt-4 flex gap-2">
                     <Button
@@ -142,7 +156,8 @@ function ProposalsPage() {
                   </div>
                 )}
                 {p.status === "approved" && (
-                  <div className="mt-4">
+                  <div className="mt-4 flex flex-wrap items-center gap-3">
+                    <span className="text-sm text-muted-foreground">{nextRunText()}</span>
                     <Button
                       size="sm"
                       variant="outline"

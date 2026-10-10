@@ -66,7 +66,78 @@ type IncidentRow = {
   acknowledged_note: string | null;
 };
 
-export async function morningBrief(opts: { dryRun?: boolean } = {}): Promise<{
+/** Weekblok: uptime, snelheid t.o.v. vorige week, incidenten, traagste property. */
+async function weekBlock(
+  targets: Array<{ id: string; name: string }>,
+  nameOf: Map<string, string>,
+): Promise<string | null> {
+  const day = (n: number) => new Date(Date.now() - n * 86400000).toISOString().slice(0, 10);
+  const [{ data: sums }, { data: inc }] = await Promise.all([
+    supabaseAdmin
+      .from("daily_summaries")
+      .select("target_id, day, uptime_pct, avg_latency_ms")
+      .gte("day", day(14)),
+    supabaseAdmin
+      .from("incidents")
+      .select("id, target_id, severity, opened_at, resolved_at")
+      .gte("opened_at", new Date(Date.now() - 7 * 86400000).toISOString())
+      .neq("severity", "monitor"),
+  ]);
+  const rows = sums ?? [];
+  if (!rows.length) return null;
+  const thisWeek = rows.filter((r) => r.day >= day(7));
+  const lastWeek = rows.filter((r) => r.day < day(7));
+  const avg = (xs: number[]) => (xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : null);
+  const uptime = avg(thisWeek.map((r) => Number(r.uptime_pct)).filter((n) => Number.isFinite(n)));
+  const latNow = avg(thisWeek.map((r) => r.avg_latency_ms).filter((n): n is number => typeof n === "number"));
+  const latPrev = avg(lastWeek.map((r) => r.avg_latency_ms).filter((n): n is number => typeof n === "number"));
+
+  const perTarget = targets
+    .map((t) => ({
+      name: t.name,
+      lat: avg(thisWeek.filter((r) => r.target_id === t.id).map((r) => r.avg_latency_ms).filter((n): n is number => typeof n === "number")),
+      up: avg(thisWeek.filter((r) => r.target_id === t.id).map((r) => Number(r.uptime_pct)).filter((n) => Number.isFinite(n))),
+    }))
+    .filter((x) => x.lat !== null);
+  const slowest = [...perTarget].sort((a, b) => (b.lat ?? 0) - (a.lat ?? 0))[0];
+  const worstUp = [...perTarget].filter((x) => x.up !== null && x.up < 100).sort((a, b) => (a.up ?? 100) - (b.up ?? 100))[0];
+
+  const opened = (inc ?? []).length;
+  const resolved = (inc ?? []).filter((i) => i.resolved_at).length;
+  const actie = (inc ?? []).filter((i) => i.severity === "actie").length;
+
+  const fmtS = (ms: number | null) => (ms === null ? "—" : `${(ms / 1000).toFixed(2).replace(".", ",")} s`);
+  const trend =
+    latNow !== null && latPrev !== null && latPrev > 0
+      ? (() => {
+          const pct = Math.round(((latNow - latPrev) / latPrev) * 100);
+          if (Math.abs(pct) < 5) return "even snel als vorige week";
+          return pct > 0 ? `${pct}% trager dan vorige week` : `${-pct}% sneller dan vorige week`;
+        })()
+      : "nog geen vergelijking met vorige week";
+
+  const stat = (big: string, small: string) =>
+    `<td style="padding:0 16px 0 0;vertical-align:top"><div style="font:600 24px/1.2 Arial,sans-serif;color:${C.text}">${esc(big)}</div><div style="font:400 13px/1.4 Arial,sans-serif;color:${C.muted}">${esc(small)}</div></td>`;
+  const lines = [
+    `Gemiddelde laadtijd ${fmtS(latNow)} — ${trend}.`,
+    slowest ? `Traagste: ${slowest.name} (${fmtS(slowest.lat)}).` : "",
+    worstUp ? `Laagste beschikbaarheid: ${worstUp.name} (${worstUp.up!.toFixed(1).replace(".", ",")}%).` : "Elke property was de hele week bereikbaar.",
+  ].filter(Boolean);
+  void nameOf;
+
+  return card(
+    label("Je week") +
+      `<table role="presentation" cellpadding="0" cellspacing="0" style="margin-bottom:14px"><tr>
+        ${stat(uptime === null ? "—" : `${uptime.toFixed(2).replace(".", ",")}%`, "bereikbaar")}
+        ${stat(String(opened), opened === 1 ? "incident" : "incidenten")}
+        ${stat(String(resolved), "opgelost")}
+        ${stat(String(actie), "keer actie")}
+      </tr></table>` +
+      lines.map((l) => `<div style="font:400 15px/1.5 Arial,sans-serif;color:${C.body}">${esc(l)}</div>`).join(""),
+  );
+}
+
+export async function morningBrief(opts: { dryRun?: boolean; week?: boolean } = {}): Promise<{
   sent: boolean;
   subject: string;
   sections: string[];
@@ -178,11 +249,16 @@ export async function morningBrief(opts: { dryRun?: boolean } = {}): Promise<{
     sections.push("sinds_gisteren");
   }
 
-  // Komt eraan: certificaten die binnen 30 dagen verlopen
+  // Komt eraan: certificaten (≤30 d) en domeinnamen (≤60 d)
   const upcoming = (ssl ?? [])
-    .filter((r) => r.check_key === "ssl")
-    .map((r) => ({ r, d: (r.detail ?? {}) as { days_left?: number; host?: string } }))
-    .filter((x) => typeof x.d.days_left === "number" && x.d.days_left >= 0 && x.d.days_left <= 30)
+    .filter((r) => r.check_key === "ssl" || r.check_key === "domain")
+    .map((r) => ({ r, d: (r.detail ?? {}) as { days_left?: number; host?: string; domain?: string } }))
+    .filter(
+      (x) =>
+        typeof x.d.days_left === "number" &&
+        x.d.days_left >= 0 &&
+        x.d.days_left <= (x.r.check_key === "domain" ? 60 : 30),
+    )
     .sort((a, b) => (a.d.days_left ?? 0) - (b.d.days_left ?? 0));
   if (upcoming.length) {
     blocks.push(
@@ -191,7 +267,7 @@ export async function morningBrief(opts: { dryRun?: boolean } = {}): Promise<{
           upcoming
             .map(
               (x) =>
-                `<div style="font:400 15px/1.5 Arial,sans-serif;color:${C.body};margin-bottom:6px"><span style="display:inline-block;width:78px;font-family:ui-monospace,Menlo,Consolas,monospace;color:${C.muted}">${x.d.days_left} d</span>Certificaat ${esc(x.d.host ?? nameOf.get(x.r.target_id) ?? "")}</div>`,
+                `<div style="font:400 15px/1.5 Arial,sans-serif;color:${C.body};margin-bottom:6px"><span style="display:inline-block;width:78px;font-family:ui-monospace,Menlo,Consolas,monospace;color:${C.muted}">${x.d.days_left} d</span>${x.r.check_key === "domain" ? "Domeinnaam" : "Certificaat"} ${esc(x.d.domain ?? x.d.host ?? nameOf.get(x.r.target_id) ?? "")}</div>`,
             )
             .join(""),
       ),
@@ -217,6 +293,16 @@ export async function morningBrief(opts: { dryRun?: boolean } = {}): Promise<{
   if (calm.length && level !== "rustig") {
     blocks.push(card(label("Rustig") + `<div style="font:400 15px/1.6 Arial,sans-serif;color:#3E4447">${esc(calm.join(", "))}</div>`));
     sections.push("rustig");
+  }
+
+  // Maandag (of ?week=1): de week in vogelvlucht
+  const isMonday = brusselsDate(now, { weekday: "long" }) === "maandag";
+  if (isMonday || opts.week) {
+    const week = await weekBlock(list, nameOf);
+    if (week) {
+      blocks.push(week);
+      sections.push("week");
+    }
   }
 
   // Voet

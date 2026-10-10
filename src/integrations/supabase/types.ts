@@ -225,6 +225,10 @@ export type Database = {
       }
       proposals: {
         Row: {
+          executed_at: string | null
+          fingerprint: string | null
+          incident_id: string | null
+          result: string | null
           category: string
           created_at: string
           decided_at: string | null
@@ -237,6 +241,10 @@ export type Database = {
           title: string
         }
         Insert: {
+          executed_at?: string | null
+          fingerprint?: string | null
+          incident_id?: string | null
+          result?: string | null
           category: string
           created_at?: string
           decided_at?: string | null
@@ -249,6 +257,10 @@ export type Database = {
           title: string
         }
         Update: {
+          executed_at?: string | null
+          fingerprint?: string | null
+          incident_id?: string | null
+          result?: string | null
           category?: string
           created_at?: string
           decided_at?: string | null

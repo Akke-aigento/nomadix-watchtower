@@ -194,8 +194,9 @@ function TargetDetailPage() {
   }));
 
   const checkCfg = (target.checks ?? {}) as Record<string, boolean>;
-  const enabledCheckKeys = ["http", "ssl", "dns", "health", "form_smoke"].filter((k) =>
-    k === "http" ? checkCfg.http !== false : !!checkCfg[k],
+  const measuredKeys = new Set((resultsQuery.data ?? []).map((r) => r.check_key));
+  const enabledCheckKeys = ["http", "ssl", "dns", "domain", "health", "form_smoke"].filter((k) =>
+    k === "http" ? checkCfg.http !== false : k === "domain" ? measuredKeys.has("domain") : !!checkCfg[k],
   );
   const latestPerCheck = new Map<string, { status: string; summary: string }>();
   for (const r of resultsQuery.data ?? []) {

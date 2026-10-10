@@ -18,6 +18,7 @@ import { Route as AuthenticatedMeldingenRouteImport } from './routes/_authentica
 import { Route as AuthenticatedProposalsRouteImport } from './routes/_authenticated/proposals'
 import { Route as AuthenticatedTargetIdRouteImport } from './routes/_authenticated/target.$id'
 import { Route as AuthenticatedTargetsNewRouteImport } from './routes/_authenticated/targets/new'
+import { Route as ApiPublicCheckRouteImport } from './routes/api/public/check'
 import { Route as ApiPublicDailyRollupRouteImport } from './routes/api/public/daily-rollup'
 import { Route as ApiPublicMorningBriefRouteImport } from './routes/api/public/morning-brief'
 import { Route as ApiPublicNotifyRouteImport } from './routes/api/public/notify'
@@ -68,6 +69,11 @@ const AuthenticatedTargetsNewRoute = AuthenticatedTargetsNewRouteImport.update({
   path: '/targets/new',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const ApiPublicCheckRoute = ApiPublicCheckRouteImport.update({
+  id: '/api/public/check',
+  path: '/api/public/check',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicDailyRollupRoute = ApiPublicDailyRollupRouteImport.update({
   id: '/api/public/daily-rollup',
   path: '/api/public/daily-rollup',
@@ -103,6 +109,7 @@ export interface FileRoutesByFullPath {
   '/proposals': typeof AuthenticatedProposalsRoute
   '/target/$id': typeof AuthenticatedTargetIdRoute
   '/targets/new': typeof AuthenticatedTargetsNewRoute
+  '/api/public/check': typeof ApiPublicCheckRoute
   '/api/public/daily-rollup': typeof ApiPublicDailyRollupRoute
   '/api/public/morning-brief': typeof ApiPublicMorningBriefRoute
   '/api/public/notify': typeof ApiPublicNotifyRoute
@@ -118,6 +125,7 @@ export interface FileRoutesByTo {
   '/proposals': typeof AuthenticatedProposalsRoute
   '/target/$id': typeof AuthenticatedTargetIdRoute
   '/targets/new': typeof AuthenticatedTargetsNewRoute
+  '/api/public/check': typeof ApiPublicCheckRoute
   '/api/public/daily-rollup': typeof ApiPublicDailyRollupRoute
   '/api/public/morning-brief': typeof ApiPublicMorningBriefRoute
   '/api/public/notify': typeof ApiPublicNotifyRoute
@@ -135,6 +143,7 @@ export interface FileRoutesById {
   '/_authenticated/proposals': typeof AuthenticatedProposalsRoute
   '/_authenticated/target/$id': typeof AuthenticatedTargetIdRoute
   '/_authenticated/targets/new': typeof AuthenticatedTargetsNewRoute
+  '/api/public/check': typeof ApiPublicCheckRoute
   '/api/public/daily-rollup': typeof ApiPublicDailyRollupRoute
   '/api/public/morning-brief': typeof ApiPublicMorningBriefRoute
   '/api/public/notify': typeof ApiPublicNotifyRoute
@@ -152,6 +161,7 @@ export interface FileRouteTypes {
     | '/proposals'
     | '/target/$id'
     | '/targets/new'
+    | '/api/public/check'
     | '/api/public/daily-rollup'
     | '/api/public/morning-brief'
     | '/api/public/notify'
@@ -167,6 +177,7 @@ export interface FileRouteTypes {
     | '/proposals'
     | '/target/$id'
     | '/targets/new'
+    | '/api/public/check'
     | '/api/public/daily-rollup'
     | '/api/public/morning-brief'
     | '/api/public/notify'
@@ -183,6 +194,7 @@ export interface FileRouteTypes {
     | '/_authenticated/proposals'
     | '/_authenticated/target/$id'
     | '/_authenticated/targets/new'
+    | '/api/public/check'
     | '/api/public/daily-rollup'
     | '/api/public/morning-brief'
     | '/api/public/notify'
@@ -194,6 +206,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   LoginRoute: typeof LoginRoute
+  ApiPublicCheckRoute: typeof ApiPublicCheckRoute
   ApiPublicDailyRollupRoute: typeof ApiPublicDailyRollupRoute
   ApiPublicMorningBriefRoute: typeof ApiPublicMorningBriefRoute
   ApiPublicNotifyRoute: typeof ApiPublicNotifyRoute
@@ -266,6 +279,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedTargetsNewRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/api/public/check': {
+      id: '/api/public/check'
+      path: '/api/public/check'
+      fullPath: '/api/public/check'
+      preLoaderRoute: typeof ApiPublicCheckRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/daily-rollup': {
       id: '/api/public/daily-rollup'
       path: '/api/public/daily-rollup'
@@ -329,6 +349,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   LoginRoute: LoginRoute,
+  ApiPublicCheckRoute: ApiPublicCheckRoute,
   ApiPublicDailyRollupRoute: ApiPublicDailyRollupRoute,
   ApiPublicMorningBriefRoute: ApiPublicMorningBriefRoute,
   ApiPublicNotifyRoute: ApiPublicNotifyRoute,

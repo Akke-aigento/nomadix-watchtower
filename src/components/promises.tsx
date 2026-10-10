@@ -8,6 +8,7 @@ const PROMISE: Record<string, string> = {
   dns: "Mail komt niet in spam (SPF/DMARC)",
   health: "Werkt van binnen (health)",
   form_smoke: "Formulier bereikbaar",
+  domain: "Domeinnaam verlengd",
 };
 
 type Day = { day: string; check_key: string; ok: number; warn: number; fail: number; unknown: number };

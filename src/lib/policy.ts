@@ -23,6 +23,7 @@ export function checkIntervalMs(checkKey: string, target: TargetLike): number {
       return target.kind === "platform" || target.kind === "storefront" ? 8 * MIN : 55 * MIN;
     case "ssl":
     case "dns":
+    case "domain":
     case "form_smoke":
       return target.frequency === "weekly" ? 6 * 24 * HOUR : 20 * HOUR;
     default:
@@ -119,6 +120,7 @@ const CHECK_NAME: Record<string, string> = {
   dns: "Mail-DNS (SPF/DMARC)",
   health: "Health",
   form_smoke: "Formulier",
+  domain: "Domeinnaam",
 };
 
 export function checkName(checkKey: string): string {
@@ -160,6 +162,8 @@ export function statusLine(checkKey: string, status: CheckStatus, detail: unknow
       return typeof d.days_left === "number" ? `Nog ${d.days_left} dagen geldig` : "Geldig";
     case "dns":
       return "SPF en DMARC staan goed";
+    case "domain":
+      return typeof d.expires_at === "string" ? `Geregistreerd tot ${new Date(d.expires_at).toLocaleDateString("nl-BE")}` : "Geregistreerd";
     case "health":
       return "Alle interne checks in orde";
     default:
@@ -183,6 +187,12 @@ export function describe(
   switch (checkKey) {
     case "http": {
       if (typeof d.error === "string") return { title: "Site onbereikbaar", summary: d.error };
+      const pageTitle = typeof d.title === "string" ? `paginatitel: “${d.title}”` : "";
+      if (d.content_issue === "error_page") return { title: "Site toont een foutpagina", summary: pageTitle };
+      if (d.content_issue === "empty_page") return { title: "Site toont een lege pagina", summary: "kapotte of lege deploy?" };
+      if (d.content_issue === "maintenance") return { title: "Site staat offline / in onderhoud", summary: pageTitle };
+      if (d.content_issue === "default_title")
+        return { title: "Standaard-paginatitel", summary: `${pageTitle} — lege deploy of vergeten SEO-titel?` };
       const code = typeof d.http_status === "number" ? d.http_status : null;
       if (status === "fail") return { title: "Site geeft een fout", summary: `HTTP ${code ?? "?"}` };
       if (code && code >= 400) return { title: "Site weigert toegang", summary: `HTTP ${code}` };
@@ -217,6 +227,13 @@ export function describe(
             .filter(Boolean)
             .join(" · "),
         ).slice(0, 300),
+      };
+    }
+    case "domain": {
+      const days = typeof d.days_left === "number" ? d.days_left : null;
+      return {
+        title: days !== null && days < 0 ? "Domeinnaam verlopen" : `Domeinnaam verloopt over ${days ?? "?"} dagen`,
+        summary: `${typeof d.domain === "string" ? d.domain : ""}${typeof d.expires_at === "string" ? ` — vervalt ${new Date(d.expires_at).toLocaleDateString("nl-BE", { timeZone: "Europe/Brussels" })}` : ""}; check of auto-renew aan staat`,
       };
     }
     case "form_smoke":

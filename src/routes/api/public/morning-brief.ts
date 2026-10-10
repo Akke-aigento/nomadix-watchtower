@@ -34,7 +34,7 @@ async function handle(request: Request) {
   }
   try {
     const { morningBrief } = await import("@/lib/morning-brief.server");
-    const result = await morningBrief({ dryRun });
+    const result = await morningBrief({ dryRun, week: params.get("week") === "1" });
     if (result.sent) await pingHeartbeat();
     return Response.json(result);
   } catch (e) {
