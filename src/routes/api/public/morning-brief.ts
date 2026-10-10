@@ -1,5 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
 
+/**
+ * Ochtendbrief. De cron vuurt om 05:30 én 06:30 UTC; enkel de run die in
+ * Brussel 07:xx valt verstuurt (zomer- en wintertijd zonder cron-gedoe).
+ * ?dry=1 = voorbeeld zonder te versturen, ?force=1 = nu versturen.
+ */
 export const Route = createFileRoute("/api/public/morning-brief")({
   server: {
     handlers: {
@@ -9,15 +14,26 @@ export const Route = createFileRoute("/api/public/morning-brief")({
   },
 });
 
+function brusselsHour(d = new Date()): number {
+  return Number(
+    new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/Brussels", hour: "2-digit", hour12: false }).format(d),
+  );
+}
+
 async function handle(request: Request) {
   const provided = request.headers.get("x-cron-secret");
   const { isValidCronSecret } = await import("@/lib/cron-secret.server");
   if (!provided || !(await isValidCronSecret(provided))) {
     return new Response("Unauthorized", { status: 401 });
   }
+  const params = new URL(request.url).searchParams;
+  const dryRun = params.get("dry") === "1";
+  const force = params.get("force") === "1";
+  if (!dryRun && !force && brusselsHour() !== 7) {
+    return Response.json({ sent: false, skipped: "niet 07:xx in Brussel", hour: brusselsHour() });
+  }
   try {
     const { morningBrief } = await import("@/lib/morning-brief.server");
-    const dryRun = new URL(request.url).searchParams.get("dry") === "1";
     const result = await morningBrief({ dryRun });
     if (result.sent) await pingHeartbeat();
     return Response.json(result);

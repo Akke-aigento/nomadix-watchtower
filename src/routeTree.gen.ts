@@ -20,6 +20,7 @@ import { Route as AuthenticatedTargetIdRouteImport } from './routes/_authenticat
 import { Route as AuthenticatedTargetsNewRouteImport } from './routes/_authenticated/targets/new'
 import { Route as ApiPublicDailyRollupRouteImport } from './routes/api/public/daily-rollup'
 import { Route as ApiPublicMorningBriefRouteImport } from './routes/api/public/morning-brief'
+import { Route as ApiPublicNotifyRouteImport } from './routes/api/public/notify'
 import { Route as ApiPublicRunScansRouteImport } from './routes/api/public/run-scans'
 import { Route as ApiPushTestRouteImport } from './routes/api/push/test'
 
@@ -77,6 +78,11 @@ const ApiPublicMorningBriefRoute = ApiPublicMorningBriefRouteImport.update({
   path: '/api/public/morning-brief',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicNotifyRoute = ApiPublicNotifyRouteImport.update({
+  id: '/api/public/notify',
+  path: '/api/public/notify',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicRunScansRoute = ApiPublicRunScansRouteImport.update({
   id: '/api/public/run-scans',
   path: '/api/public/run-scans',
@@ -99,6 +105,7 @@ export interface FileRoutesByFullPath {
   '/targets/new': typeof AuthenticatedTargetsNewRoute
   '/api/public/daily-rollup': typeof ApiPublicDailyRollupRoute
   '/api/public/morning-brief': typeof ApiPublicMorningBriefRoute
+  '/api/public/notify': typeof ApiPublicNotifyRoute
   '/api/public/run-scans': typeof ApiPublicRunScansRoute
   '/api/push/test': typeof ApiPushTestRoute
 }
@@ -113,6 +120,7 @@ export interface FileRoutesByTo {
   '/targets/new': typeof AuthenticatedTargetsNewRoute
   '/api/public/daily-rollup': typeof ApiPublicDailyRollupRoute
   '/api/public/morning-brief': typeof ApiPublicMorningBriefRoute
+  '/api/public/notify': typeof ApiPublicNotifyRoute
   '/api/public/run-scans': typeof ApiPublicRunScansRoute
   '/api/push/test': typeof ApiPushTestRoute
 }
@@ -129,6 +137,7 @@ export interface FileRoutesById {
   '/_authenticated/targets/new': typeof AuthenticatedTargetsNewRoute
   '/api/public/daily-rollup': typeof ApiPublicDailyRollupRoute
   '/api/public/morning-brief': typeof ApiPublicMorningBriefRoute
+  '/api/public/notify': typeof ApiPublicNotifyRoute
   '/api/public/run-scans': typeof ApiPublicRunScansRoute
   '/api/push/test': typeof ApiPushTestRoute
 }
@@ -145,6 +154,7 @@ export interface FileRouteTypes {
     | '/targets/new'
     | '/api/public/daily-rollup'
     | '/api/public/morning-brief'
+    | '/api/public/notify'
     | '/api/public/run-scans'
     | '/api/push/test'
   fileRoutesByTo: FileRoutesByTo
@@ -159,6 +169,7 @@ export interface FileRouteTypes {
     | '/targets/new'
     | '/api/public/daily-rollup'
     | '/api/public/morning-brief'
+    | '/api/public/notify'
     | '/api/public/run-scans'
     | '/api/push/test'
   id:
@@ -174,6 +185,7 @@ export interface FileRouteTypes {
     | '/_authenticated/targets/new'
     | '/api/public/daily-rollup'
     | '/api/public/morning-brief'
+    | '/api/public/notify'
     | '/api/public/run-scans'
     | '/api/push/test'
   fileRoutesById: FileRoutesById
@@ -184,6 +196,7 @@ export interface RootRouteChildren {
   LoginRoute: typeof LoginRoute
   ApiPublicDailyRollupRoute: typeof ApiPublicDailyRollupRoute
   ApiPublicMorningBriefRoute: typeof ApiPublicMorningBriefRoute
+  ApiPublicNotifyRoute: typeof ApiPublicNotifyRoute
   ApiPublicRunScansRoute: typeof ApiPublicRunScansRoute
   ApiPushTestRoute: typeof ApiPushTestRoute
 }
@@ -267,6 +280,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicMorningBriefRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/notify': {
+      id: '/api/public/notify'
+      path: '/api/public/notify'
+      fullPath: '/api/public/notify'
+      preLoaderRoute: typeof ApiPublicNotifyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/run-scans': {
       id: '/api/public/run-scans'
       path: '/api/public/run-scans'
@@ -311,6 +331,7 @@ const rootRouteChildren: RootRouteChildren = {
   LoginRoute: LoginRoute,
   ApiPublicDailyRollupRoute: ApiPublicDailyRollupRoute,
   ApiPublicMorningBriefRoute: ApiPublicMorningBriefRoute,
+  ApiPublicNotifyRoute: ApiPublicNotifyRoute,
   ApiPublicRunScansRoute: ApiPublicRunScansRoute,
   ApiPushTestRoute: ApiPushTestRoute,
 }
