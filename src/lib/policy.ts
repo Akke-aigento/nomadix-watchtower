@@ -141,6 +141,12 @@ const HEALTH_LABEL: Record<string, string> = {
   honeypot_hits: "spam-pogingen",
   suppressed_recent: "onderdrukte mails",
   cron_reminders: "herinneringscron",
+  cron_http: "cron-aanroepen falen",
+  cron_jobs: "cronjobs falen",
+  payments: "betaalanomalie",
+  odoo_sync: "Odoo-sync",
+  email: "mails komen niet aan",
+  webhooks: "webhooks falen",
 };
 
 export function healthLabel(key: string): string {
