@@ -72,7 +72,7 @@ function DashboardPage() {
     },
     onSuccess: (_d, vars) => {
       queryClient.invalidateQueries({ queryKey: ["proposals"] });
-      toast.success(vars.status === "approved" ? "Go gegeven — Claude pakt dit bij de volgende ronde op (8u, 13u of 19u)" : "Afgewezen");
+      toast.success(vars.status === "approved" ? "Go gegeven — Claude pakt dit op bij de volgende ronde (rond 8u, 13u of 19u)" : "Afgewezen");
     },
     onError: (e: Error) => toast.error(e.message),
   });

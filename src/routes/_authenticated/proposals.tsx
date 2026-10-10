@@ -18,11 +18,14 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-/** De geplande Claude-taak draait om 08:00, 13:00 en 19:00 (Brussel). */
+/** De geplande Claude-taak draait om 07:54, 12:54 en 18:54 (Brussel). */
 function nextRunText(): string {
-  const hour = Number(new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/Brussels", hour: "2-digit", hour12: false }).format(new Date()));
-  const next = [8, 13, 19].find((h) => h > hour);
-  return next ? `Claude pakt dit op om ${next}:00` : "Claude pakt dit morgen om 8:00 op";
+  const parts = new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/Brussels", hour: "2-digit", minute: "2-digit", hour12: false }).formatToParts(new Date());
+  const h = Number(parts.find((p) => p.type === "hour")?.value);
+  const m = Number(parts.find((p) => p.type === "minute")?.value);
+  const now = h * 60 + m;
+  const next = [7 * 60 + 54, 12 * 60 + 54, 18 * 60 + 54].find((t) => t > now);
+  return next ? `Claude pakt dit op rond ${Math.round(next / 60)}u` : "Claude pakt dit morgen rond 8u op";
 }
 
 export const Route = createFileRoute("/_authenticated/proposals")({
