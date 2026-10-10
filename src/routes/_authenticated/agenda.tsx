@@ -47,7 +47,11 @@ function AgendaPage() {
   const items = useQuery({
     queryKey: ["agenda"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("agenda").select("*").eq("status", "open").order("due_date");
+      const { data, error } = await supabase
+        .from("agenda")
+        .select("*")
+        .eq("status", "open")
+        .order("due_date");
       if (error) throw error;
       return data ?? [];
     },
@@ -95,7 +99,8 @@ function AgendaPage() {
         <header>
           <h1 className="text-2xl font-semibold tracking-tight">Agenda</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Alles wat ooit verloopt: API-versies, sleutels, certificaten, domeinen. Watchtower vult dit zelf aan.
+            Alles wat ooit verloopt: API-versies, sleutels, certificaten, domeinen. Watchtower vult
+            dit zelf aan.
           </p>
         </header>
 
@@ -103,7 +108,8 @@ function AgendaPage() {
           <section className="panel space-y-3 p-4">
             <div className="text-sm font-medium">In je agenda op iPhone of Mac</div>
             <p className="text-sm text-muted-foreground">
-              Eén tik: abonneer en elke deadline staat in je agenda, met een herinnering 30 en 7 dagen vooraf.
+              Eén tik: abonneer en elke deadline staat in je agenda, met een herinnering 30 en 7
+              dagen vooraf.
             </p>
             <div className="flex flex-wrap gap-2">
               <Button asChild size="sm">
@@ -146,11 +152,18 @@ function AgendaPage() {
                         <div className="min-w-0 flex-1">
                           <div className="flex flex-wrap items-baseline justify-between gap-x-3">
                             <span className="font-medium">{r.title}</span>
-                            <span className={cn("text-tech shrink-0 text-xs", n < 0 ? "text-[var(--crit)]" : "text-muted-foreground")}>
+                            <span
+                              className={cn(
+                                "text-tech shrink-0 text-xs",
+                                n < 0 ? "text-[var(--crit)]" : "text-muted-foreground",
+                              )}
+                            >
                               {new Date(r.due_date).toLocaleDateString("nl-BE")} · {relDays(n)}
                             </span>
                           </div>
-                          {r.description && <p className="mt-0.5 text-sm text-muted-foreground">{r.description}</p>}
+                          {r.description && (
+                            <p className="mt-0.5 text-sm text-muted-foreground">{r.description}</p>
+                          )}
                           <div className="mt-1.5 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
                             <span>{KIND_LABEL[r.kind] ?? r.kind}</span>
                             {r.integration_key && (
@@ -159,12 +172,21 @@ function AgendaPage() {
                               </Link>
                             )}
                             {r.target_id && (
-                              <Link to="/target/$id" params={{ id: r.target_id }} className="hover:text-foreground">
+                              <Link
+                                to="/target/$id"
+                                params={{ id: r.target_id }}
+                                className="hover:text-foreground"
+                              >
                                 bekijk property
                               </Link>
                             )}
                             {r.source_url && (
-                              <a href={r.source_url} target="_blank" rel="noreferrer" className="hover:text-foreground">
+                              <a
+                                href={r.source_url}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="hover:text-foreground"
+                              >
                                 bron
                               </a>
                             )}
@@ -172,7 +194,11 @@ function AgendaPage() {
                         </div>
                         {r.origin === "agenda" && (
                           <div className="flex gap-1">
-                            <Button size="sm" variant="ghost" onClick={() => close.mutate({ id: r.id, status: "done" })}>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => close.mutate({ id: r.id, status: "done" })}
+                            >
                               Gedaan
                             </Button>
                           </div>

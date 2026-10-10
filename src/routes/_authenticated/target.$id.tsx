@@ -195,20 +195,39 @@ function TargetDetailPage() {
 
   const checkCfg = (target.checks ?? {}) as Record<string, boolean>;
   const measuredKeys = new Set((resultsQuery.data ?? []).map((r) => r.check_key));
-  const enabledCheckKeys = ["store", "odoo", "http", "health", "ssl", "domain", "dns", "form_smoke"].filter((k) =>
-    k === "http" ? checkCfg.http !== false : k === "domain" || k === "store" || k === "odoo" ? measuredKeys.has(k) : !!checkCfg[k],
+  const enabledCheckKeys = [
+    "store",
+    "odoo",
+    "http",
+    "health",
+    "ssl",
+    "domain",
+    "dns",
+    "form_smoke",
+  ].filter((k) =>
+    k === "http"
+      ? checkCfg.http !== false
+      : k === "domain" || k === "store" || k === "odoo"
+        ? measuredKeys.has(k)
+        : !!checkCfg[k],
   );
   const latestPerCheck = new Map<string, { status: string; summary: string }>();
   for (const r of resultsQuery.data ?? []) {
     if (latestPerCheck.has(r.check_key)) continue;
-    latestPerCheck.set(r.check_key, { status: r.status, summary: statusLine(r.check_key, r.status as CheckStatus, r.detail, r.latency_ms) });
+    latestPerCheck.set(r.check_key, {
+      status: r.status,
+      summary: statusLine(r.check_key, r.status as CheckStatus, r.detail, r.latency_ms),
+    });
   }
 
   return (
     <AppShell>
       <div className="mx-auto max-w-3xl space-y-8">
         <header className="space-y-3 pt-1">
-          <Link to="/dashboard" className="inline-flex min-h-11 items-center text-sm text-muted-foreground hover:text-foreground">
+          <Link
+            to="/dashboard"
+            className="inline-flex min-h-11 items-center text-sm text-muted-foreground hover:text-foreground"
+          >
             ‹ Overzicht
           </Link>
           <div className="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">
@@ -217,10 +236,17 @@ function TargetDetailPage() {
           <h1 className="text-3xl font-semibold tracking-tight">{target.name}</h1>
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
             <StatusText status={target.status} />
-            <a href={target.url} target="_blank" rel="noreferrer" className="text-muted-foreground hover:text-primary">
+            <a
+              href={target.url}
+              target="_blank"
+              rel="noreferrer"
+              className="text-muted-foreground hover:text-primary"
+            >
               {target.url.replace(/^https?:\/\//, "")}
             </a>
-            <span className="text-tech text-[11px] text-muted-foreground">gemeten {relativeTime(target.last_scanned_at)}</span>
+            <span className="text-tech text-[11px] text-muted-foreground">
+              gemeten {relativeTime(target.last_scanned_at)}
+            </span>
           </div>
         </header>
 
@@ -236,239 +262,250 @@ function TargetDetailPage() {
         </section>
 
         {form && (
-          <details className="panel group p-5"><summary className="cursor-pointer list-none text-tech text-xs text-muted-foreground">Instellingen ▸</summary><section className="mt-5 space-y-5">
-
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="name">Naam</Label>
-                <Input
-                  id="name"
-                  value={form.name}
-                  onChange={(e) => setForm({ ...form, name: e.target.value })}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="url">URL</Label>
-                <Input
-                  id="url"
-                  value={form.url}
-                  onChange={(e) => setForm({ ...form, url: e.target.value })}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Frequentie</Label>
-                <Select
-                  value={form.frequency}
-                  onValueChange={(v) => setForm({ ...form, frequency: v })}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="daily">Dagelijks</SelectItem>
-                    <SelectItem value="weekly">Wekelijks</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="flex items-center justify-between pt-6">
-                <Label htmlFor="enabled">Actief</Label>
-                <Switch
-                  id="enabled"
-                  checked={form.enabled}
-                  onCheckedChange={(v) => setForm({ ...form, enabled: v })}
-                />
-              </div>
-            </div>
-
-            <div className="space-y-3">
-              <Label>Checks</Label>
-              {Object.keys(CHECK_LABEL).map((key) => (
-                <div key={key} className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">{CHECK_LABEL[key]}</span>
-                  <Switch
-                    checked={!!form.checks[key]}
-                    onCheckedChange={(v) =>
-                      setForm({ ...form, checks: { ...form.checks, [key]: v } })
-                    }
-                  />
-                </div>
-              ))}
-            </div>
-
-            {form.checks.form_smoke && (
-              <div className="space-y-2">
-                <Label htmlFor="smoke">Formulier smoke-URL</Label>
-                <Input
-                  id="smoke"
-                  value={form.form_smoke_url}
-                  onChange={(e) => setForm({ ...form, form_smoke_url: e.target.value })}
-                />
-              </div>
-            )}
-
-            {form.checks.health && (
+          <details className="panel group p-5">
+            <summary className="cursor-pointer list-none text-tech text-xs text-muted-foreground">
+              Instellingen ▸
+            </summary>
+            <section className="mt-5 space-y-5">
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
-                  <Label htmlFor="health_url">Health-URL</Label>
+                  <Label htmlFor="name">Naam</Label>
                   <Input
-                    id="health_url"
-                    value={form.health_url}
-                    onChange={(e) => setForm({ ...form, health_url: e.target.value })}
+                    id="name"
+                    value={form.name}
+                    onChange={(e) => setForm({ ...form, name: e.target.value })}
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="health_token">Health-token</Label>
+                  <Label htmlFor="url">URL</Label>
                   <Input
-                    id="health_token"
-                    type="password"
-                    autoComplete="off"
-                    value={form.health_token}
-                    onChange={(e) => setForm({ ...form, health_token: e.target.value })}
+                    id="url"
+                    value={form.url}
+                    onChange={(e) => setForm({ ...form, url: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Frequentie</Label>
+                  <Select
+                    value={form.frequency}
+                    onValueChange={(v) => setForm({ ...form, frequency: v })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="daily">Dagelijks</SelectItem>
+                      <SelectItem value="weekly">Wekelijks</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="flex items-center justify-between pt-6">
+                  <Label htmlFor="enabled">Actief</Label>
+                  <Switch
+                    id="enabled"
+                    checked={form.enabled}
+                    onCheckedChange={(v) => setForm({ ...form, enabled: v })}
                   />
                 </div>
               </div>
-            )}
 
-            <div className="space-y-2">
-              <Label htmlFor="notes">Notities</Label>
-              <Textarea
-                id="notes"
-                rows={3}
-                value={form.notes}
-                onChange={(e) => setForm({ ...form, notes: e.target.value })}
-              />
-            </div>
+              <div className="space-y-3">
+                <Label>Checks</Label>
+                {Object.keys(CHECK_LABEL).map((key) => (
+                  <div key={key} className="flex items-center justify-between">
+                    <span className="text-sm text-muted-foreground">{CHECK_LABEL[key]}</span>
+                    <Switch
+                      checked={!!form.checks[key]}
+                      onCheckedChange={(v) =>
+                        setForm({ ...form, checks: { ...form.checks, [key]: v } })
+                      }
+                    />
+                  </div>
+                ))}
+              </div>
 
-            <Button disabled={save.isPending} onClick={() => save.mutate(form)}>
-              {save.isPending ? "Bezig…" : "Opslaan"}
-            </Button>
-          </section></details>
+              {form.checks.form_smoke && (
+                <div className="space-y-2">
+                  <Label htmlFor="smoke">Formulier smoke-URL</Label>
+                  <Input
+                    id="smoke"
+                    value={form.form_smoke_url}
+                    onChange={(e) => setForm({ ...form, form_smoke_url: e.target.value })}
+                  />
+                </div>
+              )}
+
+              {form.checks.health && (
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="health_url">Health-URL</Label>
+                    <Input
+                      id="health_url"
+                      value={form.health_url}
+                      onChange={(e) => setForm({ ...form, health_url: e.target.value })}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="health_token">Health-token</Label>
+                    <Input
+                      id="health_token"
+                      type="password"
+                      autoComplete="off"
+                      value={form.health_token}
+                      onChange={(e) => setForm({ ...form, health_token: e.target.value })}
+                    />
+                  </div>
+                </div>
+              )}
+
+              <div className="space-y-2">
+                <Label htmlFor="notes">Notities</Label>
+                <Textarea
+                  id="notes"
+                  rows={3}
+                  value={form.notes}
+                  onChange={(e) => setForm({ ...form, notes: e.target.value })}
+                />
+              </div>
+
+              <Button disabled={save.isPending} onClick={() => save.mutate(form)}>
+                {save.isPending ? "Bezig…" : "Opslaan"}
+              </Button>
+            </section>
+          </details>
         )}
 
-        <details className="panel p-5"><summary className="cursor-pointer list-none text-tech text-xs text-muted-foreground">Ruwe metingen en geschiedenis ▸</summary><div className="mt-5 space-y-8">
-        <section className="panel fade-in-card p-5">
-          <h2 className="text-tech text-xs text-muted-foreground">Uptime-trend (90 dagen)</h2>
-          <div className="mt-4 h-56">
-            {chartData.length === 0 ? (
-              <p className="text-sm text-muted-foreground">Nog geen dagcijfers.</p>
-            ) : (
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={chartData}>
-                  <CartesianGrid stroke="var(--border)" vertical={false} />
-                  <XAxis
-                    dataKey="day"
-                    tick={{ fontSize: 10, fill: "var(--muted-foreground)" }}
-                    tickLine={false}
-                    axisLine={false}
-                  />
-                  <YAxis
-                    domain={[0, 100]}
-                    tick={{ fontSize: 10, fill: "var(--muted-foreground)" }}
-                    tickLine={false}
-                    axisLine={false}
-                    width={32}
-                  />
-                  <Tooltip
-                    contentStyle={{
-                      background: "var(--popover)",
-                      border: "1px solid var(--border)",
-                      borderRadius: 8,
-                      fontSize: 12,
-                    }}
-                  />
-                  <Bar dataKey="uptime" fill="var(--chart-1)" radius={[2, 2, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            )}
-          </div>
-        </section>
-
-        <section className="space-y-3">
-          <div className="flex items-center gap-3">
-            <h2 className="text-tech text-xs text-muted-foreground">Scan-historiek</h2>
-            <div className="ml-auto w-44">
-              <Select value={checkFilter} onValueChange={setCheckFilter}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Alle checks</SelectItem>
-                  {Object.entries(CHECK_LABEL).map(([value, label]) => (
-                    <SelectItem key={value} value={value}>
-                      {label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          <div className="panel overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="text-tech border-b border-border text-[10px] text-muted-foreground">
-                  <th className="px-4 py-2 text-left">Tijd</th>
-                  <th className="px-4 py-2 text-left">Check</th>
-                  <th className="px-4 py-2 text-left">Status</th>
-                  <th className="px-4 py-2 text-left">Latency</th>
-                  <th className="px-4 py-2 text-left">Detail</th>
-                </tr>
-              </thead>
-              <tbody>
-                {results.length === 0 ? (
-                  <tr>
-                    <td colSpan={5} className="px-4 py-4 text-muted-foreground">
-                      Nog geen scans.
-                    </td>
-                  </tr>
+        <details className="panel p-5">
+          <summary className="cursor-pointer list-none text-tech text-xs text-muted-foreground">
+            Ruwe metingen en geschiedenis ▸
+          </summary>
+          <div className="mt-5 space-y-8">
+            <section className="panel fade-in-card p-5">
+              <h2 className="text-tech text-xs text-muted-foreground">Uptime-trend (90 dagen)</h2>
+              <div className="mt-4 h-56">
+                {chartData.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">Nog geen dagcijfers.</p>
                 ) : (
-                  results.map((r) => (
-                    <tr key={r.id} className="border-b border-border/60 last:border-0">
-                      <td className="text-tech px-4 py-2 text-[11px] text-muted-foreground">
-                        {formatDateTime(r.measured_at)}
-                      </td>
-                      <td className="px-4 py-2">{CHECK_LABEL[r.check_key] ?? r.check_key}</td>
-                      <td className="px-4 py-2">
-                        <span className="inline-flex items-center gap-2">
-                          <StatusDot status={r.status} />
-                          <StatusText status={r.status} />
-                        </span>
-                      </td>
-                      <td className="px-4 py-2 font-mono text-xs">
-                        {r.latency_ms === null ? "—" : `${r.latency_ms} ms`}
-                      </td>
-                      <td className="max-w-xs truncate px-4 py-2 font-mono text-[11px] text-muted-foreground">
-                        {r.detail ? JSON.stringify(r.detail) : "—"}
-                      </td>
-                    </tr>
-                  ))
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={chartData}>
+                      <CartesianGrid stroke="var(--border)" vertical={false} />
+                      <XAxis
+                        dataKey="day"
+                        tick={{ fontSize: 10, fill: "var(--muted-foreground)" }}
+                        tickLine={false}
+                        axisLine={false}
+                      />
+                      <YAxis
+                        domain={[0, 100]}
+                        tick={{ fontSize: 10, fill: "var(--muted-foreground)" }}
+                        tickLine={false}
+                        axisLine={false}
+                        width={32}
+                      />
+                      <Tooltip
+                        contentStyle={{
+                          background: "var(--popover)",
+                          border: "1px solid var(--border)",
+                          borderRadius: 8,
+                          fontSize: 12,
+                        }}
+                      />
+                      <Bar dataKey="uptime" fill="var(--chart-1)" radius={[2, 2, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
                 )}
-              </tbody>
-            </table>
-          </div>
-        </section>
+              </div>
+            </section>
 
-        <section className="space-y-3">
-          <h2 className="text-tech text-xs text-muted-foreground">Alert-historiek</h2>
-          <div className="panel p-4">
-            {(alertsQuery.data ?? []).length === 0 ? (
-              <p className="text-sm text-muted-foreground">Geen alerts voor dit target.</p>
-            ) : (
-              <ul className="space-y-2">
-                {(alertsQuery.data ?? []).map((a) => (
-                  <li key={a.id} className="flex flex-wrap items-center gap-3 text-sm">
-                    <StatusDot status={a.transition.split("->").at(-1) ?? "unknown"} />
-                    <span>{CHECK_LABEL[a.check_key] ?? a.check_key}</span>
-                    <span className="font-mono text-xs text-muted-foreground">{a.transition}</span>
-                    <span className="text-tech ml-auto text-[10px] text-muted-foreground">
-                      {formatDateTime(a.created_at)} · {a.mailed ? "gemaild" : "niet gemaild"}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            )}
+            <section className="space-y-3">
+              <div className="flex items-center gap-3">
+                <h2 className="text-tech text-xs text-muted-foreground">Scan-historiek</h2>
+                <div className="ml-auto w-44">
+                  <Select value={checkFilter} onValueChange={setCheckFilter}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Alle checks</SelectItem>
+                      {Object.entries(CHECK_LABEL).map(([value, label]) => (
+                        <SelectItem key={value} value={value}>
+                          {label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div className="panel overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="text-tech border-b border-border text-[10px] text-muted-foreground">
+                      <th className="px-4 py-2 text-left">Tijd</th>
+                      <th className="px-4 py-2 text-left">Check</th>
+                      <th className="px-4 py-2 text-left">Status</th>
+                      <th className="px-4 py-2 text-left">Latency</th>
+                      <th className="px-4 py-2 text-left">Detail</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {results.length === 0 ? (
+                      <tr>
+                        <td colSpan={5} className="px-4 py-4 text-muted-foreground">
+                          Nog geen scans.
+                        </td>
+                      </tr>
+                    ) : (
+                      results.map((r) => (
+                        <tr key={r.id} className="border-b border-border/60 last:border-0">
+                          <td className="text-tech px-4 py-2 text-[11px] text-muted-foreground">
+                            {formatDateTime(r.measured_at)}
+                          </td>
+                          <td className="px-4 py-2">{CHECK_LABEL[r.check_key] ?? r.check_key}</td>
+                          <td className="px-4 py-2">
+                            <span className="inline-flex items-center gap-2">
+                              <StatusDot status={r.status} />
+                              <StatusText status={r.status} />
+                            </span>
+                          </td>
+                          <td className="px-4 py-2 font-mono text-xs">
+                            {r.latency_ms === null ? "—" : `${r.latency_ms} ms`}
+                          </td>
+                          <td className="max-w-xs truncate px-4 py-2 font-mono text-[11px] text-muted-foreground">
+                            {r.detail ? JSON.stringify(r.detail) : "—"}
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </section>
+
+            <section className="space-y-3">
+              <h2 className="text-tech text-xs text-muted-foreground">Alert-historiek</h2>
+              <div className="panel p-4">
+                {(alertsQuery.data ?? []).length === 0 ? (
+                  <p className="text-sm text-muted-foreground">Geen alerts voor dit target.</p>
+                ) : (
+                  <ul className="space-y-2">
+                    {(alertsQuery.data ?? []).map((a) => (
+                      <li key={a.id} className="flex flex-wrap items-center gap-3 text-sm">
+                        <StatusDot status={a.transition.split("->").at(-1) ?? "unknown"} />
+                        <span>{CHECK_LABEL[a.check_key] ?? a.check_key}</span>
+                        <span className="font-mono text-xs text-muted-foreground">
+                          {a.transition}
+                        </span>
+                        <span className="text-tech ml-auto text-[10px] text-muted-foreground">
+                          {formatDateTime(a.created_at)} · {a.mailed ? "gemaild" : "niet gemaild"}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            </section>
           </div>
-        </section>
-        </div></details>
+        </details>
       </div>
     </AppShell>
   );

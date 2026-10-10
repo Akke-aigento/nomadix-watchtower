@@ -5,7 +5,14 @@ import { AppShell } from "@/components/app-shell";
 import { supabase } from "@/integrations/supabase/client";
 import { relativeTime } from "@/components/watchtower";
 import { cn } from "@/lib/utils";
-import { FindingCard, TOUCH, TouchpointChips, engineLine, useEngineHealth, type Finding } from "@/components/findings";
+import {
+  FindingCard,
+  TOUCH,
+  TouchpointChips,
+  engineLine,
+  useEngineHealth,
+  type Finding,
+} from "@/components/findings";
 
 export const Route = createFileRoute("/_authenticated/koppelingen")({
   head: () => ({ meta: [{ title: "Koppelingen — Nomadix Watchtower" }] }),
@@ -29,7 +36,11 @@ const CATEGORY: Record<string, string> = {
   unclassified: "Zelf ontdekt — nog te classificeren",
 };
 
-const RISK_COLOR: Record<string, string> = { actie: "var(--crit)", aandacht: "var(--warn)", ok: "var(--ok)" };
+const RISK_COLOR: Record<string, string> = {
+  actie: "var(--crit)",
+  aandacht: "var(--warn)",
+  ok: "var(--ok)",
+};
 
 const UPSTREAM: Record<string, [string, string]> = {
   none: ["operationeel", "var(--ok)"],
@@ -70,7 +81,11 @@ function KoppelingenPage() {
   const findingsQ = useQuery({
     queryKey: ["findings"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("findings").select("*").order("detected_at", { ascending: false }).limit(200);
+      const { data, error } = await supabase
+        .from("findings")
+        .select("*")
+        .order("detected_at", { ascending: false })
+        .limit(200);
       if (error) throw error;
       return (data ?? []) as Finding[];
     },
@@ -79,7 +94,9 @@ function KoppelingenPage() {
   const coverageQ = useQuery({
     queryKey: ["radar_coverage"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("radar_coverage").select("key, due, review_days_effective");
+      const { data, error } = await supabase
+        .from("radar_coverage")
+        .select("key, due, review_days_effective");
       if (error) throw error;
       return new Map((data ?? []).map((r) => [r.key, r]));
     },
@@ -88,16 +105,30 @@ function KoppelingenPage() {
   const engine = useEngineHealth();
   const eng = engineLine(engine.data);
   const findings = findingsQ.data ?? [];
-  const openFindings = findings.filter((f) => f.status === "nieuw" && f.impact !== "raakt_ons_niet");
-  const recentFindings = findings.filter((f) => f.status !== "nieuw" || f.impact === "raakt_ons_niet").slice(0, 5);
+  const openFindings = findings.filter(
+    (f) => f.status === "nieuw" && f.impact !== "raakt_ons_niet",
+  );
+  const recentFindings = findings
+    .filter((f) => f.status !== "nieuw" || f.impact === "raakt_ons_niet")
+    .slice(0, 5);
 
   const all = q.data ?? [];
   const list = onlyActive ? all.filter((i) => i.usage_state === "active") : all;
   const risky = all.filter((i) => i.risk !== "ok");
-  const degraded = all.filter((i) => i.usage_state === "active" && ["minor", "major", "critical"].includes(i.upstream_indicator ?? ""));
-  const discovered = all.filter((i) => i.discovered_via !== "manual" && Date.now() - Date.parse(i.discovered_at) < 7 * 86400000);
+  const degraded = all.filter(
+    (i) =>
+      i.usage_state === "active" &&
+      ["minor", "major", "critical"].includes(i.upstream_indicator ?? ""),
+  );
+  const discovered = all.filter(
+    (i) => i.discovered_via !== "manual" && Date.now() - Date.parse(i.discovered_at) < 7 * 86400000,
+  );
   const cats = [...new Set(list.map((i) => i.category))].sort((a, b) =>
-    a === "unclassified" ? 1 : b === "unclassified" ? -1 : (CATEGORY[a] ?? a).localeCompare(CATEGORY[b] ?? b, "nl"),
+    a === "unclassified"
+      ? 1
+      : b === "unclassified"
+        ? -1
+        : (CATEGORY[a] ?? a).localeCompare(CATEGORY[b] ?? b, "nl"),
   );
 
   return (
@@ -106,15 +137,28 @@ function KoppelingenPage() {
         <header>
           <h1 className="text-2xl font-semibold tracking-tight">Koppelingen</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Elke partner waar onze code mee praat — zelf ontdekt in de repo's en de SellQo-data — met waar hij
-            overal in de keten opduikt: code, beheerschermen, marketing en helpartikels.
+            Elke partner waar onze code mee praat — zelf ontdekt in de repo's en de SellQo-data —
+            met waar hij overal in de keten opduikt: code, beheerschermen, marketing en
+            helpartikels.
           </p>
           <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-5">
             <Stat n={all.length} label="koppelingen" />
             <Stat n={all.filter((i) => i.usage_state === "active").length} label="in gebruik" />
-            <Stat n={risky.length} label="met risico" color={risky.length ? "var(--warn)" : undefined} />
-            <Stat n={openFindings.length} label="open vondsten" color={openFindings.length ? "var(--warn)" : undefined} />
-            <Stat n={degraded.length} label="partner in storing" color={degraded.length ? "var(--crit)" : undefined} />
+            <Stat
+              n={risky.length}
+              label="met risico"
+              color={risky.length ? "var(--warn)" : undefined}
+            />
+            <Stat
+              n={openFindings.length}
+              label="open vondsten"
+              color={openFindings.length ? "var(--warn)" : undefined}
+            />
+            <Stat
+              n={degraded.length}
+              label="partner in storing"
+              color={degraded.length ? "var(--crit)" : undefined}
+            />
           </div>
           <p className="mt-3 text-sm" style={{ color: eng.warn ? "var(--warn)" : undefined }}>
             <span className="text-muted-foreground">Radar · </span>
@@ -124,10 +168,16 @@ function KoppelingenPage() {
 
         {openFindings.length > 0 && (
           <section className="space-y-2">
-            <h2 className="text-tech text-xs text-muted-foreground">Vondsten die nog een pakket of besluit nodig hebben</h2>
+            <h2 className="text-tech text-xs text-muted-foreground">
+              Vondsten die nog een pakket of besluit nodig hebben
+            </h2>
             <div className="space-y-2">
               {openFindings.map((f) => (
-                <FindingCard key={f.id} f={f} partner={all.find((i) => i.key === f.integration_key)?.name} />
+                <FindingCard
+                  key={f.id}
+                  f={f}
+                  partner={all.find((i) => i.key === f.integration_key)?.name}
+                />
               ))}
             </div>
           </section>
@@ -135,10 +185,16 @@ function KoppelingenPage() {
 
         {recentFindings.length > 0 && (
           <details className="panel px-4 py-3 text-sm">
-            <summary className="cursor-pointer text-muted-foreground">Recent verwerkte vondsten ({recentFindings.length})</summary>
+            <summary className="cursor-pointer text-muted-foreground">
+              Recent verwerkte vondsten ({recentFindings.length})
+            </summary>
             <div className="mt-3 space-y-2">
               {recentFindings.map((f) => (
-                <FindingCard key={f.id} f={f} partner={all.find((i) => i.key === f.integration_key)?.name} />
+                <FindingCard
+                  key={f.id}
+                  f={f}
+                  partner={all.find((i) => i.key === f.integration_key)?.name}
+                />
               ))}
             </div>
           </details>
@@ -149,9 +205,14 @@ function KoppelingenPage() {
             <h2 className="text-tech text-xs text-muted-foreground">Partners nu in storing</h2>
             <div className="panel divide-y divide-border">
               {degraded.map((i) => (
-                <div key={i.key} className="flex items-center justify-between gap-3 px-4 py-3 text-sm">
+                <div
+                  key={i.key}
+                  className="flex items-center justify-between gap-3 px-4 py-3 text-sm"
+                >
                   <span className="font-medium">{i.partner}</span>
-                  <span style={{ color: UPSTREAM[i.upstream_indicator!]?.[1] }}>{i.upstream_description}</span>
+                  <span style={{ color: UPSTREAM[i.upstream_indicator!]?.[1] }}>
+                    {i.upstream_description}
+                  </span>
                 </div>
               ))}
             </div>
@@ -165,7 +226,11 @@ function KoppelingenPage() {
         )}
 
         <label className="flex items-center gap-2 text-sm text-muted-foreground">
-          <input type="checkbox" checked={onlyActive} onChange={(e) => setOnlyActive(e.target.checked)} />
+          <input
+            type="checkbox"
+            checked={onlyActive}
+            onChange={(e) => setOnlyActive(e.target.checked)}
+          />
           Enkel koppelingen die echt in gebruik zijn
         </label>
 
@@ -183,7 +248,10 @@ function KoppelingenPage() {
                       onClick={() => setOpen(open === i.key ? null : i.key)}
                       aria-expanded={open === i.key}
                     >
-                      <span className="mt-1.5 inline-block size-2 shrink-0 rounded-full" style={{ background: RISK_COLOR[i.risk] }} />
+                      <span
+                        className="mt-1.5 inline-block size-2 shrink-0 rounded-full"
+                        style={{ background: RISK_COLOR[i.risk] }}
+                      />
                       <div className="min-w-0 flex-1">
                         <div className="flex flex-wrap items-baseline justify-between gap-x-3">
                           <span className="font-medium">{i.name}</span>
@@ -197,7 +265,9 @@ function KoppelingenPage() {
                         </div>
                         <div className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
                           {i.used_version && <span>versie: {i.used_version}</span>}
-                          {i.latest_version && i.latest_version !== i.used_version && <span>nieuwste: {i.latest_version}</span>}
+                          {i.latest_version && i.latest_version !== i.used_version && (
+                            <span>nieuwste: {i.latest_version}</span>
+                          )}
                           {i.upstream_indicator && UPSTREAM[i.upstream_indicator] && (
                             <span style={{ color: UPSTREAM[i.upstream_indicator][1] }}>
                               status: {UPSTREAM[i.upstream_indicator][0]}
@@ -206,24 +276,75 @@ function KoppelingenPage() {
                           {coverageQ.data?.get(i.key)?.due && i.usage_state === "active" && (
                             <span style={{ color: "var(--warn)" }}>radar te doen</span>
                           )}
-                          {findings.some((f) => f.integration_key === i.key && f.status === "nieuw" && f.impact !== "raakt_ons_niet") && (
-                            <span style={{ color: "var(--warn)" }}>open vondst</span>
-                          )}
+                          {findings.some(
+                            (f) =>
+                              f.integration_key === i.key &&
+                              f.status === "nieuw" &&
+                              f.impact !== "raakt_ons_niet",
+                          ) && <span style={{ color: "var(--warn)" }}>open vondst</span>}
                           <TouchpointChips touchpoints={i.touchpoints} />
                         </div>
-                        {i.risk_note && <p className={cn("mt-1 text-sm", i.risk === "ok" ? "text-muted-foreground" : "")}>{i.risk_note}</p>}
+                        {i.risk_note && (
+                          <p
+                            className={cn(
+                              "mt-1 text-sm",
+                              i.risk === "ok" ? "text-muted-foreground" : "",
+                            )}
+                          >
+                            {i.risk_note}
+                          </p>
+                        )}
                       </div>
                     </button>
                     {open === i.key && (
                       <div className="space-y-2 bg-secondary/30 px-4 py-3 text-sm">
                         <div className="flex flex-wrap gap-3 text-xs">
-                          {i.docs_url && <a className="underline-offset-4 hover:underline" href={i.docs_url} target="_blank" rel="noreferrer">docs</a>}
-                          {i.changelog_url && <a className="underline-offset-4 hover:underline" href={i.changelog_url} target="_blank" rel="noreferrer">changelog</a>}
-                          {i.status_page_url && <a className="underline-offset-4 hover:underline" href={i.status_page_url} target="_blank" rel="noreferrer">statuspagina</a>}
-                          {i.pricing_url && <a className="underline-offset-4 hover:underline" href={i.pricing_url} target="_blank" rel="noreferrer">prijzen</a>}
+                          {i.docs_url && (
+                            <a
+                              className="underline-offset-4 hover:underline"
+                              href={i.docs_url}
+                              target="_blank"
+                              rel="noreferrer"
+                            >
+                              docs
+                            </a>
+                          )}
+                          {i.changelog_url && (
+                            <a
+                              className="underline-offset-4 hover:underline"
+                              href={i.changelog_url}
+                              target="_blank"
+                              rel="noreferrer"
+                            >
+                              changelog
+                            </a>
+                          )}
+                          {i.status_page_url && (
+                            <a
+                              className="underline-offset-4 hover:underline"
+                              href={i.status_page_url}
+                              target="_blank"
+                              rel="noreferrer"
+                            >
+                              statuspagina
+                            </a>
+                          )}
+                          {i.pricing_url && (
+                            <a
+                              className="underline-offset-4 hover:underline"
+                              href={i.pricing_url}
+                              target="_blank"
+                              rel="noreferrer"
+                            >
+                              prijzen
+                            </a>
+                          )}
                           <span className="text-muted-foreground">
-                            ontdekt via {i.discovered_via} · laatst gezien {relativeTime(i.last_seen_at)}
-                            {i.radar_checked_at ? ` · radar ${relativeTime(i.radar_checked_at)}` : ""}
+                            ontdekt via {i.discovered_via} · laatst gezien{" "}
+                            {relativeTime(i.last_seen_at)}
+                            {i.radar_checked_at
+                              ? ` · radar ${relativeTime(i.radar_checked_at)}`
+                              : ""}
                           </span>
                         </div>
                         {i.notes && <p className="text-muted-foreground">{i.notes}</p>}
@@ -251,7 +372,10 @@ function KoppelingenPage() {
                                   </div>
                                   <ul className="space-y-1 font-mono text-xs">
                                     {rows.map((u) => (
-                                      <li key={`${u.repo}/${u.file}/${u.version}/${u.kind}`} className="flex justify-between gap-3">
+                                      <li
+                                        key={`${u.repo}/${u.file}/${u.version}/${u.kind}`}
+                                        className="flex justify-between gap-3"
+                                      >
                                         <span className="truncate">
                                           {u.repo}/{u.file}
                                         </span>

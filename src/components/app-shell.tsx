@@ -6,7 +6,6 @@ import {
   CalendarClock,
   Coins,
   Globe,
-  LayoutGrid,
   Lightbulb,
   LogOut,
   MoreHorizontal,
@@ -17,7 +16,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { DetailPanel } from "@/components/detail-panel";
 import { cn } from "@/lib/utils";
 
 type NavItem = { to: string; label: string; icon: LucideIcon; badge?: "proposals" | "access" };
@@ -136,7 +135,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   return (
     <div className="flex min-h-screen">
-      <aside className="sticky top-0 hidden h-screen w-64 shrink-0 flex-col border-r border-sidebar-border bg-sidebar px-4 py-5 md:flex">
+      <aside className="sticky top-0 hidden h-screen w-64 shrink-0 flex-col border-r border-white/[0.06] bg-[#0a1728]/60 px-4 py-5 backdrop-blur-2xl md:flex">
         <Link to="/dashboard" className="flex items-center gap-3 px-2">
           <LogoMark className="size-9" />
           <div className="leading-tight">
@@ -164,17 +163,19 @@ export function AppShell({ children }: { children: ReactNode }) {
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="sticky top-0 z-30 flex items-center gap-2.5 border-b border-border/60 bg-background/85 px-4 pt-[env(safe-area-inset-top)] backdrop-blur-xl md:hidden">
+        <header className="sticky top-0 z-30 flex items-center gap-2.5 border-b border-white/[0.06] bg-[#0b1a2e]/70 px-4 pt-[env(safe-area-inset-top)] backdrop-blur-2xl md:hidden">
           <Link to="/dashboard" className="flex h-12 items-center gap-2.5">
             <LogoMark className="size-7" />
             <span className="text-[15px] font-bold tracking-tight">Watchtower</span>
           </Link>
         </header>
-        <main className="flex-1 px-4 pt-5 pb-32 md:px-8 md:pt-8 md:pb-10">{children}</main>
+        <main className="flex-1 px-4 pt-5 pb-36 md:px-8 md:pt-8 md:pb-10">{children}</main>
       </div>
 
+      {/* Zwevende tabbalk (telefoon) */}
       <nav
-        className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-5 border-t border-border/60 bg-background/90 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl md:hidden"
+        className="glass-bar fixed inset-x-3 z-40 grid grid-cols-5 rounded-[26px] p-1.5 md:hidden"
+        style={{ bottom: "calc(env(safe-area-inset-bottom) + 10px)" }}
         aria-label="Hoofdmenu"
       >
         {MAIN.map((item) => {
@@ -185,21 +186,27 @@ export function AppShell({ children }: { children: ReactNode }) {
               key={item.to}
               to={item.to}
               className={cn(
-                "relative flex min-h-[58px] flex-col items-center justify-center gap-1 text-[10.5px] font-medium text-muted-foreground",
-                active && "text-foreground",
+                "relative flex h-[54px] flex-col items-center justify-center gap-0.5 rounded-[20px] text-[10.5px] font-semibold text-muted-foreground transition-all active:scale-95",
+                active && "text-[#06202c]",
               )}
+              style={
+                active
+                  ? {
+                      background: "linear-gradient(135deg,#2dd4bf,#22d3ee 55%,#38bdf8)",
+                      boxShadow: "0 8px 24px -8px rgb(34 211 238 / 65%)",
+                    }
+                  : undefined
+              }
             >
-              <span
-                className={cn(
-                  "flex h-7 w-12 items-center justify-center rounded-full transition-colors",
-                  active && "bg-primary/15",
-                )}
-              >
-                <item.icon className={cn("size-[20px]", active && "text-primary")} />
-              </span>
+              <item.icon className="size-[20px]" strokeWidth={active ? 2.4 : 2} />
               {item.label}
               {n > 0 && (
-                <span className="tabular absolute top-1.5 left-1/2 ml-2 min-w-4 rounded-full bg-primary px-1 text-[10px] font-bold leading-4 text-primary-foreground">
+                <span
+                  className={cn(
+                    "tabular absolute top-1 right-[18%] min-w-4 rounded-full px-1 text-[10px] font-bold leading-4",
+                    active ? "bg-[#06202c] text-white" : "bg-primary text-primary-foreground",
+                  )}
+                >
                   {n}
                 </span>
               )}
@@ -210,59 +217,51 @@ export function AppShell({ children }: { children: ReactNode }) {
           type="button"
           onClick={() => setMoreOpen(true)}
           className={cn(
-            "relative flex min-h-[58px] flex-col items-center justify-center gap-1 text-[10.5px] font-medium text-muted-foreground",
-            moreActive && "text-foreground",
+            "relative flex h-[54px] flex-col items-center justify-center gap-0.5 rounded-[20px] text-[10.5px] font-semibold text-muted-foreground transition-all active:scale-95",
+            moreActive && "bg-white/10 text-foreground",
           )}
         >
-          <span
-            className={cn(
-              "flex h-7 w-12 items-center justify-center rounded-full",
-              moreActive && "bg-primary/15",
-            )}
-          >
-            <MoreHorizontal className={cn("size-[20px]", moreActive && "text-primary")} />
-          </span>
+          <MoreHorizontal className="size-[20px]" />
           Meer
           {badges.access > 0 && (
-            <span className="absolute top-2 left-1/2 ml-3 size-2 rounded-full bg-primary" />
+            <span className="absolute top-2 right-[26%] size-2 rounded-full bg-primary" />
           )}
         </button>
       </nav>
 
-      <Sheet open={moreOpen} onOpenChange={setMoreOpen}>
-        <SheetContent
-          side="bottom"
-          className="rounded-t-3xl border-border bg-popover pb-[calc(env(safe-area-inset-bottom)+16px)]"
-        >
-          <SheetHeader>
-            <SheetTitle className="flex items-center gap-2 text-left">
-              <LayoutGrid className="size-4 text-primary" /> Meer
-            </SheetTitle>
-          </SheetHeader>
-          <div className="mt-2 grid gap-1 px-2">
-            {MORE.map((item) => (
-              <Link
-                key={item.to}
-                to={item.to}
-                onClick={() => setMoreOpen(false)}
-                className="flex items-center gap-3 rounded-xl px-3 py-3.5 text-[15px] font-medium hover:bg-accent"
-              >
+      <DetailPanel open={moreOpen} onClose={() => setMoreOpen(false)} eyebrow="Meer" title="Meer">
+        <div className="grid grid-cols-2 gap-2.5 pt-2">
+          {MORE.map((item) => (
+            <Link
+              key={item.to}
+              to={item.to}
+              onClick={() => setMoreOpen(false)}
+              className={cn(
+                "panel relative flex min-h-[104px] flex-col justify-between p-4 transition-transform active:scale-[0.98]",
+                isActive(item.to) && "glow-border",
+              )}
+            >
+              <span className="flex size-10 items-center justify-center rounded-2xl bg-primary/15">
                 <item.icon className="size-5 text-primary" />
+              </span>
+              <span className="flex items-center gap-2 text-[15px] font-semibold leading-tight">
                 {item.label}
                 {item.badge && <Badge n={badges[item.badge]} />}
-              </Link>
-            ))}
-            <button
-              type="button"
-              onClick={handleSignOut}
-              className="flex items-center gap-3 rounded-xl px-3 py-3.5 text-left text-[15px] font-medium text-muted-foreground hover:bg-accent"
-            >
+              </span>
+            </Link>
+          ))}
+          <button
+            type="button"
+            onClick={handleSignOut}
+            className="panel flex min-h-[104px] flex-col justify-between p-4 text-left text-muted-foreground transition-transform active:scale-[0.98]"
+          >
+            <span className="flex size-10 items-center justify-center rounded-2xl bg-white/[0.06]">
               <LogOut className="size-5" />
-              Uitloggen
-            </button>
-          </div>
-        </SheetContent>
-      </Sheet>
+            </span>
+            <span className="text-[15px] font-semibold">Uitloggen</span>
+          </button>
+        </div>
+      </DetailPanel>
     </div>
   );
 }

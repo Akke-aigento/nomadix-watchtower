@@ -152,14 +152,127 @@
     font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;
     -webkit-tap-highlight-color: transparent;
+    min-height: 100dvh;
+  }
+
+  /* Aurora: zachte lichtvlekken in de merkkleuren achter alles, plus een fijn puntraster. */
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background:
+      radial-gradient(60rem 40rem at 8% -10%, rgb(20 184 166 / 16%), transparent 60%),
+      radial-gradient(50rem 36rem at 100% 0%, rgb(14 165 233 / 14%), transparent 60%),
+      radial-gradient(40rem 30rem at 50% 110%, rgb(144 133 233 / 9%), transparent 60%),
+      var(--color-background);
+  }
+  body::after {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background-image: radial-gradient(rgb(255 255 255 / 5%) 1px, transparent 1px);
+    background-size: 22px 22px;
+    mask-image: linear-gradient(to bottom, black, transparent 70%);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.001ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.001ms !important;
+    }
   }
 }
 
+/* Glazen kaart: halfdoorzichtig met blur, lichte bovenrand en diepe schaduw. */
 @utility panel {
-  background-color: var(--color-card);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-panel);
+  background-color: color-mix(in oklab, var(--color-card) 74%, transparent);
+  -webkit-backdrop-filter: blur(16px) saturate(140%);
+  backdrop-filter: blur(16px) saturate(140%);
+  border: 1px solid rgb(255 255 255 / 7%);
+  border-radius: var(--radius-xl);
+  box-shadow:
+    inset 0 1px 0 0 rgb(255 255 255 / 6%),
+    0 24px 48px -28px rgb(0 0 0 / 70%);
+}
+
+/* Verlooprand (teal → cyaan → blauw) voor wat eruit moet springen. */
+@utility glow-border {
+  position: relative;
+  &::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    padding: 1px;
+    background: linear-gradient(135deg, rgb(45 212 191 / 70%), rgb(34 211 238 / 25%) 40%, rgb(56 189 248 / 60%));
+    -webkit-mask:
+      linear-gradient(#000 0 0) content-box,
+      linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    pointer-events: none;
+  }
+}
+
+@utility glass-bar {
+  background-color: rgb(11 26 46 / 72%);
+  -webkit-backdrop-filter: blur(22px) saturate(160%);
+  backdrop-filter: blur(22px) saturate(160%);
+  border: 1px solid rgb(255 255 255 / 8%);
+  box-shadow:
+    inset 0 1px 0 0 rgb(255 255 255 / 7%),
+    0 18px 40px -12px rgb(0 0 0 / 65%);
+}
+
+@utility rise {
+  animation: wt-rise 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+@keyframes wt-rise {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes wt-sweep {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes wt-ring {
+  0% {
+    transform: scale(0.85);
+    opacity: 0.55;
+  }
+  100% {
+    transform: scale(1.55);
+    opacity: 0;
+  }
+}
+
+@keyframes wt-breathe {
+  0%,
+  100% {
+    transform: scale(1);
+    filter: brightness(1);
+  }
+  50% {
+    transform: scale(1.08);
+    filter: brightness(1.25);
+  }
 }
 
 @utility tabular {

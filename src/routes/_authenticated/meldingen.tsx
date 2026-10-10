@@ -6,7 +6,13 @@ import { AppShell } from "@/components/app-shell";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { relativeTime } from "@/components/watchtower";
-import { disablePush, enablePush, pushState, sendTestPush, type PushState } from "@/lib/push-client";
+import {
+  disablePush,
+  enablePush,
+  pushState,
+  sendTestPush,
+  type PushState,
+} from "@/lib/push-client";
 
 export const Route = createFileRoute("/_authenticated/meldingen")({
   head: () => ({ meta: [{ title: "Meldingen — Nomadix Watchtower" }] }),
@@ -31,7 +37,11 @@ const RULES: Array<{ sev: string; color: string; rows: Array<[string, string, st
       ["Push", "Nooit", "Kan wachten tot morgen"],
     ],
   },
-  { sev: "Opgelost", color: "var(--ok)", rows: [["Push + mail als een actie voorbij is", "Altijd"]] },
+  {
+    sev: "Opgelost",
+    color: "var(--ok)",
+    rows: [["Push + mail als een actie voorbij is", "Altijd"]],
+  },
   {
     sev: "Vooraf weten",
     color: "var(--muted-foreground)",
@@ -48,7 +58,9 @@ function MeldingenPage() {
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
-    pushState().then(setState).catch(() => setState("unsupported"));
+    pushState()
+      .then(setState)
+      .catch(() => setState("unsupported"));
   }, []);
 
   const devices = useQuery({
@@ -92,21 +104,30 @@ function MeldingenPage() {
             <div className="space-y-2 text-sm">
               <p className="font-medium">Zet Watchtower eerst op je beginscherm.</p>
               <p className="text-muted-foreground">
-                Op iPhone werken meldingen enkel vanuit de app op je beginscherm: tik in Safari op het deel-icoon,
-                kies “Zet op beginscherm”, open Watchtower vanaf daar en kom terug naar deze pagina.
+                Op iPhone werken meldingen enkel vanuit de app op je beginscherm: tik in Safari op
+                het deel-icoon, kies “Zet op beginscherm”, open Watchtower vanaf daar en kom terug
+                naar deze pagina.
               </p>
             </div>
           )}
           {state === "unsupported" && (
-            <p className="text-sm text-muted-foreground">Deze browser ondersteunt geen pushmeldingen.</p>
+            <p className="text-sm text-muted-foreground">
+              Deze browser ondersteunt geen pushmeldingen.
+            </p>
           )}
           {state === "denied" && (
             <p className="text-sm text-muted-foreground">
-              Meldingen staan geblokkeerd voor Watchtower. Zet ze aan in de instellingen van je toestel en kom terug.
+              Meldingen staan geblokkeerd voor Watchtower. Zet ze aan in de instellingen van je
+              toestel en kom terug.
             </p>
           )}
           {state === "off" && (
-            <Button size="lg" className="w-full sm:w-auto" disabled={busy} onClick={() => run(enablePush, "Meldingen staan aan")}>
+            <Button
+              size="lg"
+              className="w-full sm:w-auto"
+              disabled={busy}
+              onClick={() => run(enablePush, "Meldingen staan aan")}
+            >
               Meldingen aanzetten
             </Button>
           )}
@@ -123,7 +144,11 @@ function MeldingenPage() {
               >
                 Testmelding sturen
               </Button>
-              <Button variant="ghost" disabled={busy} onClick={() => run(disablePush, "Meldingen uit op dit toestel")}>
+              <Button
+                variant="ghost"
+                disabled={busy}
+                onClick={() => run(disablePush, "Meldingen uit op dit toestel")}
+              >
                 Uitzetten op dit toestel
               </Button>
             </div>
@@ -134,7 +159,10 @@ function MeldingenPage() {
           {RULES.map((block) => (
             <div key={block.sev}>
               <div className="mb-2 flex items-center gap-2">
-                <span className="inline-block size-2 rounded-full" style={{ background: block.color }} />
+                <span
+                  className="inline-block size-2 rounded-full"
+                  style={{ background: block.color }}
+                />
                 <span className="text-tech text-xs text-muted-foreground">{block.sev}</span>
               </div>
               <div className="panel divide-y divide-border">
@@ -156,10 +184,15 @@ function MeldingenPage() {
           <h2 className="text-tech text-xs text-muted-foreground">Geregistreerde toestellen</h2>
           <div className="panel divide-y divide-border">
             {(devices.data ?? []).length === 0 ? (
-              <p className="p-4 text-sm text-muted-foreground">Nog geen toestel — zet meldingen aan op je gsm.</p>
+              <p className="p-4 text-sm text-muted-foreground">
+                Nog geen toestel — zet meldingen aan op je gsm.
+              </p>
             ) : (
               (devices.data ?? []).map((d) => (
-                <div key={d.id} className="flex items-center justify-between gap-4 px-4 py-3 text-sm">
+                <div
+                  key={d.id}
+                  className="flex items-center justify-between gap-4 px-4 py-3 text-sm"
+                >
                   <span className="truncate">{deviceName(d.user_agent)}</span>
                   <span className="text-tech shrink-0 text-[11px] text-muted-foreground">
                     {d.failure_count > 0

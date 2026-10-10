@@ -13,7 +13,14 @@ const PROMISE: Record<string, string> = {
   odoo: "Boekhoudsync kan Odoo bereiken",
 };
 
-type Day = { day: string; check_key: string; ok: number; warn: number; fail: number; unknown: number };
+type Day = {
+  day: string;
+  check_key: string;
+  ok: number;
+  warn: number;
+  fail: number;
+  unknown: number;
+};
 
 function dayColor(d: Day | undefined): string {
   if (!d) return "var(--secondary)";
@@ -42,7 +49,10 @@ export function Promises({
   const q = useQuery({
     queryKey: ["daily_check_status", targetId],
     queryFn: async () => {
-      const { data, error } = await supabase.rpc("wt_daily_check_status", { p_target: targetId, p_days: 30 });
+      const { data, error } = await supabase.rpc("wt_daily_check_status", {
+        p_target: targetId,
+        p_days: 30,
+      });
       if (error) throw error;
       return (data ?? []) as Day[];
     },
@@ -74,7 +84,10 @@ export function Promises({
                 </span>
               </div>
               {now?.summary && <p className="text-sm text-muted-foreground">{now.summary}</p>}
-              <div className="grid gap-[2px]" style={{ gridTemplateColumns: "repeat(30, minmax(0, 1fr))" }}>
+              <div
+                className="grid gap-[2px]"
+                style={{ gridTemplateColumns: "repeat(30, minmax(0, 1fr))" }}
+              >
                 {days.map((d) => {
                   const row = byKey.get(`${key}|${d}`);
                   return (

@@ -35,7 +35,9 @@ function severityClass(sev: string) {
 
 export function SeverityBadge({ severity }: { severity: string }) {
   return (
-    <span className={cn("text-tech rounded border px-1.5 py-0.5 text-[10px]", severityClass(severity))}>
+    <span
+      className={cn("text-tech rounded border px-1.5 py-0.5 text-[10px]", severityClass(severity))}
+    >
       {SEVERITY_LABEL[severity] ?? severity}
     </span>
   );
@@ -98,7 +100,9 @@ export function IncidentList({
         .update({ acknowledged_until: null, acknowledged_note: null })
         .eq("id", i.id);
       if (error) throw error;
-      await supabase.from("incident_events").insert({ incident_id: i.id, kind: "unacknowledged", message: "erkenning opgeheven" });
+      await supabase
+        .from("incident_events")
+        .insert({ incident_id: i.id, kind: "unacknowledged", message: "erkenning opgeheven" });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["incidents"] });
@@ -128,7 +132,10 @@ export function IncidentList({
           return (
             <li
               key={i.id}
-              className={cn("panel flex flex-wrap items-start gap-3 p-4", (acked || resolved) && "opacity-70")}
+              className={cn(
+                "panel flex flex-wrap items-start gap-3 p-4",
+                (acked || resolved) && "opacity-70",
+              )}
             >
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-center gap-2">
@@ -159,7 +166,12 @@ export function IncidentList({
               </div>
               {!resolved &&
                 (acked ? (
-                  <Button size="sm" variant="ghost" disabled={unack.isPending} onClick={() => unack.mutate(i)}>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    disabled={unack.isPending}
+                    onClick={() => unack.mutate(i)}
+                  >
                     Erkenning opheffen
                   </Button>
                 ) : (
@@ -182,7 +194,13 @@ const ACK_PRESETS = [
   { label: "1 maand", days: 30 },
 ];
 
-function AcknowledgeDialog({ incident, onClose }: { incident: IncidentRow | null; onClose: () => void }) {
+function AcknowledgeDialog({
+  incident,
+  onClose,
+}: {
+  incident: IncidentRow | null;
+  onClose: () => void;
+}) {
   const queryClient = useQueryClient();
   const [days, setDays] = useState(7);
   const [note, setNote] = useState("");
@@ -218,8 +236,8 @@ function AcknowledgeDialog({ incident, onClose }: { incident: IncidentRow | null
         <DialogHeader>
           <DialogTitle>Erkennen</DialogTitle>
           <DialogDescription>
-            {incident?.title}. Je krijgt hier geen meldingen meer over tot de gekozen datum. Wordt het intussen
-            opgelost, dan sluit het incident vanzelf.
+            {incident?.title}. Je krijgt hier geen meldingen meer over tot de gekozen datum. Wordt
+            het intussen opgelost, dan sluit het incident vanzelf.
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4">

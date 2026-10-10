@@ -11,6 +11,7 @@ import { cn } from "@/lib/utils";
 import { FINDING_KIND, engineLine, useEngineHealth } from "@/components/findings";
 import { IncidentsWeekly, LatencyGrid } from "@/components/charts";
 import { ProposalRow, ProposalSheet } from "@/components/proposal-detail";
+import { RadarOrb } from "@/components/radar-orb";
 import { Coins } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
@@ -185,26 +186,58 @@ function DashboardPage() {
   return (
     <AppShell>
       <div className="mx-auto max-w-5xl space-y-8">
-        <header className="pt-2">
-          <div className="mb-3 flex items-center gap-2">
-            <span
-              className="inline-block size-2.5 rounded-full"
-              style={{ background: LEVEL_COLOR[level] }}
-            />
-            <span
-              className="text-xs font-semibold uppercase tracking-[0.08em]"
-              style={{ color: LEVEL_COLOR[level] }}
-            >
-              {level === "actie" ? "Actie" : level === "aandacht" ? "Aandacht" : "Rustig"}
-            </span>
-            <span className="text-tech ml-auto text-[11px] text-muted-foreground">
-              gemeten {relativeTime(lastScan)}
-            </span>
+        <header
+          className="rise relative overflow-hidden rounded-[32px] border border-white/10 p-6 md:p-8"
+          style={{
+            background:
+              "radial-gradient(28rem 18rem at 85% 0%, rgb(14 165 233 / 16%), transparent 65%), radial-gradient(24rem 16rem at 0% 100%, rgb(20 184 166 / 14%), transparent 65%), rgb(19 37 61 / 55%)",
+            boxShadow: "inset 0 1px 0 0 rgb(255 255 255 / 7%), 0 30px 60px -30px rgb(0 0 0 / 70%)",
+          }}
+        >
+          <div className="flex flex-col items-start gap-6 sm:flex-row sm:items-center">
+            <RadarOrb level={level} className="w-32 shrink-0 md:w-40" />
+            <div className="min-w-0 flex-1">
+              <div className="mb-2 flex flex-wrap items-center gap-2 text-xs font-semibold uppercase tracking-[0.12em]">
+                <span style={{ color: LEVEL_COLOR[level] }}>
+                  {level === "actie" ? "Actie nodig" : level === "aandacht" ? "Aandacht" : "Rustig"}
+                </span>
+                <span className="text-muted-foreground/60">·</span>
+                <span className="text-muted-foreground">
+                  {new Intl.DateTimeFormat("nl-BE", {
+                    weekday: "long",
+                    day: "numeric",
+                    month: "long",
+                    timeZone: "Europe/Brussels",
+                  }).format(new Date())}
+                </span>
+              </div>
+              <h1
+                className={cn(
+                  "pb-1 text-[34px] font-extrabold leading-[1.1] tracking-tight md:text-5xl",
+                  level === "rustig" && !loading && "brand-text",
+                )}
+              >
+                {loading ? "Even kijken…" : headline}
+              </h1>
+              {!loading && <p className="mt-2.5 text-[15px] text-muted-foreground">{sub}</p>}
+              <div className="mt-5 flex flex-wrap gap-2">
+                <Link
+                  to="/proposals"
+                  className="rounded-full border border-white/10 bg-white/[0.05] px-3.5 py-1.5 text-sm font-medium transition-colors hover:bg-white/10"
+                >
+                  <span className="tabular font-bold">{proposals.length}</span>{" "}
+                  <span className="text-muted-foreground">wachten op go</span>
+                </Link>
+                <span className="rounded-full border border-white/10 bg-white/[0.05] px-3.5 py-1.5 text-sm font-medium">
+                  <span className="tabular font-bold">{targets.length}</span>{" "}
+                  <span className="text-muted-foreground">sites bewaakt</span>
+                </span>
+                <span className="rounded-full border border-white/10 bg-white/[0.05] px-3.5 py-1.5 text-sm text-muted-foreground">
+                  gemeten {relativeTime(lastScan)}
+                </span>
+              </div>
+            </div>
           </div>
-          <h1 className="text-3xl font-semibold leading-tight tracking-tight md:text-4xl">
-            {loading ? "Even kijken…" : headline}
-          </h1>
-          {!loading && <p className="mt-2 text-[15px] text-muted-foreground">{sub}</p>}
         </header>
 
         {actie.length > 0 && (

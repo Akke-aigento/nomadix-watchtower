@@ -2,13 +2,7 @@ import { Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { ChevronRight, ExternalLink } from "lucide-react";
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
+import { DetailPanel } from "@/components/detail-panel";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
@@ -162,130 +156,175 @@ export function ProposalSheet({
   const siblings = q.data?.siblings ?? [];
   const findings = q.data?.findings ?? [];
 
+  const canDecide =
+    p && (p.status === "proposed" || p.status === "failed" || p.status === "rejected");
+
   return (
-    <Sheet open={!!id} onOpenChange={(o) => !o && onOpenChange(null)}>
-      <SheetContent
-        side="right"
-        className="w-full overflow-y-auto border-border bg-background p-0 sm:max-w-xl"
-      >
-        {!p ? (
-          <div className="p-6">
-            <SheetHeader>
-              <SheetTitle>Laden…</SheetTitle>
-            </SheetHeader>
-          </div>
-        ) : (
-          <div className="flex min-h-full flex-col">
-            <div className="space-y-6 px-5 pt-[calc(env(safe-area-inset-top)+20px)] pb-6">
-              <SheetHeader className="space-y-3 p-0 text-left">
-                <div className="flex flex-wrap items-center gap-2 pr-8">
-                  <StatusPill status={p.status} />
-                  <CategoryBadge category={p.category} />
-                  {p.bundle_order != null && (
-                    <span className="text-xs text-muted-foreground">
-                      stap {p.bundle_order} van {siblings.length}
-                    </span>
-                  )}
-                </div>
-                <SheetTitle className="text-2xl font-bold leading-tight">{p.title}</SheetTitle>
-                {p.bundle_title && (
-                  <SheetDescription className="text-sm">Pakket: {p.bundle_title}</SheetDescription>
-                )}
-              </SheetHeader>
-
-              {p.watch_targets?.name && p.target_id && (
-                <Link
-                  to="/target/$id"
-                  params={{ id: p.target_id }}
-                  onClick={() => onOpenChange(null)}
-                  className="inline-flex items-center gap-1 text-sm font-medium text-primary"
-                >
-                  {p.watch_targets.name} <ExternalLink className="size-3.5" />
-                </Link>
-              )}
-
-              <Block label="Waarom">
-                <p className="text-[15px] leading-relaxed">{p.description}</p>
-              </Block>
-
-              <Block label="Wat er gebeurt als je Go geeft">
-                <p className="whitespace-pre-wrap rounded-xl bg-secondary/60 p-3.5 text-[15px] leading-relaxed">
-                  {p.proposed_action}
-                </p>
-              </Block>
-
-              {p.result && (
-                <Block label={p.status === "failed" ? "Wat Watchtower meldt" : "Resultaat"}>
-                  <p className="rounded-xl border border-border p-3.5 text-[15px] leading-relaxed">
-                    {p.result}
-                  </p>
-                </Block>
-              )}
-
-              {findings.length > 0 && (
-                <Block label={`Gevonden bij de partner (${findings.length})`}>
-                  <div className="space-y-2">
-                    {findings.map((f) => (
-                      <FindingCard key={f.id} f={f} className="bg-card" />
-                    ))}
-                  </div>
-                </Block>
-              )}
-
-              {siblings.length > 1 && (
-                <Block label="Alle stappen van dit pakket">
-                  <div className="divide-y divide-border rounded-xl border border-border">
-                    {siblings.map((s) => (
-                      <button
-                        key={s.id}
-                        type="button"
-                        onClick={() => onOpenChange(s.id)}
-                        className={cn(
-                          "flex w-full items-center gap-3 px-3 py-2.5 text-left text-sm hover:bg-secondary/40",
-                          s.id === p.id && "bg-secondary/60",
-                        )}
-                      >
-                        <span className="tabular w-5 shrink-0 text-muted-foreground">
-                          {s.bundle_order}
-                        </span>
-                        <span className="min-w-0 flex-1 truncate">{s.title}</span>
-                        <StatusPill status={s.status} />
-                      </button>
-                    ))}
-                  </div>
-                </Block>
-              )}
-
-              <p className="text-xs text-muted-foreground">
-                Aangemaakt {formatDateTime(p.created_at)}
-                {p.decided_at ? ` · beslist ${formatDateTime(p.decided_at)}` : ""}
-                {p.executed_at ? ` · uitgevoerd ${formatDateTime(p.executed_at)}` : ""}
-              </p>
-            </div>
-
-            {(p.status === "proposed" || p.status === "failed" || p.status === "rejected") && (
-              <div className="sticky bottom-0 mt-auto flex gap-2 border-t border-border bg-background/95 px-5 pt-3 pb-[calc(env(safe-area-inset-bottom)+12px)] backdrop-blur">
-                <Button
-                  className="flex-1"
-                  disabled={decide.isPending}
-                  onClick={() => decide.mutate({ pid: p.id, status: "approved" })}
-                >
-                  {p.status === "proposed" ? "Go" : "Opnieuw Go"}
-                </Button>
-                {p.status === "proposed" && (
-                  <Button
-                    variant="outline"
-                    disabled={decide.isPending}
-                    onClick={() => decide.mutate({ pid: p.id, status: "rejected" })}
-                  >
-                    Afwijzen
-                  </Button>
-                )}
-              </div>
+    <DetailPanel
+      open={!!id}
+      onClose={() => onOpenChange(null)}
+      title={p?.title ?? "Voorstel"}
+      eyebrow={p?.bundle_title ? `Pakket · ${p.bundle_title}` : "Voorstel"}
+      footer={
+        canDecide && p ? (
+          <div className="flex gap-2">
+            <Button
+              size="lg"
+              className="brand-gradient h-12 flex-1 rounded-2xl text-base font-bold text-[#06202c] shadow-[0_10px_30px_-10px_rgb(34_211_238/60%)] hover:opacity-95"
+              disabled={decide.isPending}
+              onClick={() => decide.mutate({ pid: p.id, status: "approved" })}
+            >
+              {p.status === "proposed" ? "Go" : "Opnieuw Go"}
+            </Button>
+            {p.status === "proposed" && (
+              <Button
+                size="lg"
+                variant="outline"
+                className="h-12 rounded-2xl border-white/15 bg-white/[0.04]"
+                disabled={decide.isPending}
+                onClick={() => decide.mutate({ pid: p.id, status: "rejected" })}
+              >
+                Afwijzen
+              </Button>
             )}
           </div>
-        )}
-      </SheetContent>
-    </Sheet>
+        ) : undefined
+      }
+    >
+      {!p ? (
+        <div className="space-y-3 pt-4">
+          <div className="h-7 w-3/4 animate-pulse rounded-lg bg-white/10" />
+          <div className="h-24 animate-pulse rounded-2xl bg-white/5" />
+        </div>
+      ) : (
+        <div key={p.id} className="rise space-y-7 pt-2">
+          <header className="space-y-3">
+            <div className="flex flex-wrap items-center gap-2">
+              <StatusPill status={p.status} />
+              <CategoryBadge category={p.category} />
+              {p.bundle_order != null && siblings.length > 1 && (
+                <span className="text-xs text-muted-foreground">
+                  stap {p.bundle_order} van {siblings.length}
+                </span>
+              )}
+            </div>
+            <h2 className="text-[26px] font-bold leading-[1.15] tracking-tight">{p.title}</h2>
+            {p.watch_targets?.name && p.target_id && (
+              <Link
+                to="/target/$id"
+                params={{ id: p.target_id }}
+                onClick={() => onOpenChange(null)}
+                className="inline-flex items-center gap-1 text-sm font-medium text-primary"
+              >
+                {p.watch_targets.name} <ExternalLink className="size-3.5" />
+              </Link>
+            )}
+          </header>
+
+          {siblings.length > 1 && (
+            <nav aria-label="Stappen van dit pakket" className="-mx-5 overflow-x-auto px-5">
+              <ol className="flex min-w-max items-center px-1 py-1.5">
+                {siblings.map((s, idx) => {
+                  const active = s.id === p.id;
+                  const color = STATUS_COLOR[s.status] ?? "var(--muted-foreground)";
+                  return (
+                    <li key={s.id} className="flex items-center">
+                      {idx > 0 && <span className="h-px w-5 bg-white/15" aria-hidden />}
+                      <button
+                        type="button"
+                        onClick={() => onOpenChange(s.id)}
+                        title={s.title}
+                        className={cn(
+                          "tabular flex size-9 items-center justify-center rounded-full border text-sm font-bold transition-all",
+                          active
+                            ? "scale-110 text-[#06202c]"
+                            : "bg-white/[0.04] text-foreground hover:bg-white/10",
+                        )}
+                        style={
+                          active
+                            ? {
+                                background: "linear-gradient(135deg,#14b8a6,#06b6d4,#0ea5e9)",
+                                borderColor: "transparent",
+                              }
+                            : { borderColor: `color-mix(in oklab, ${color} 55%, transparent)` }
+                        }
+                      >
+                        {s.bundle_order ?? idx + 1}
+                      </button>
+                    </li>
+                  );
+                })}
+              </ol>
+            </nav>
+          )}
+
+          <Block label="Waarom">
+            <p className="text-[15.5px] leading-relaxed text-foreground/90">{p.description}</p>
+          </Block>
+
+          <Block label="Wat er gebeurt als je Go geeft">
+            <div className="glow-border rounded-2xl bg-white/[0.04] p-4">
+              <p className="whitespace-pre-wrap text-[15.5px] leading-relaxed">
+                {p.proposed_action}
+              </p>
+            </div>
+          </Block>
+
+          {p.result && (
+            <Block label={p.status === "failed" ? "Wat Watchtower meldt" : "Resultaat"}>
+              <div
+                className="rounded-2xl border p-4 text-[15.5px] leading-relaxed"
+                style={{
+                  borderColor: `color-mix(in oklab, ${STATUS_COLOR[p.status] ?? "var(--border)"} 40%, transparent)`,
+                  background: `color-mix(in oklab, ${STATUS_COLOR[p.status] ?? "var(--border)"} 8%, transparent)`,
+                }}
+              >
+                {p.result}
+              </div>
+            </Block>
+          )}
+
+          {findings.length > 0 && (
+            <Block label={`Gevonden bij de partner (${findings.length})`}>
+              <div className="space-y-2">
+                {findings.map((f) => (
+                  <FindingCard key={f.id} f={f} className="border-white/10 bg-white/[0.03]" />
+                ))}
+              </div>
+            </Block>
+          )}
+
+          {siblings.length > 1 && (
+            <Block label="Alle stappen">
+              <div className="divide-y divide-white/10 overflow-hidden rounded-2xl border border-white/10">
+                {siblings.map((s) => (
+                  <button
+                    key={s.id}
+                    type="button"
+                    onClick={() => onOpenChange(s.id)}
+                    className={cn(
+                      "flex w-full items-center gap-3 px-3.5 py-3 text-left text-sm transition-colors hover:bg-white/[0.05]",
+                      s.id === p.id && "bg-white/[0.07]",
+                    )}
+                  >
+                    <span className="tabular w-5 shrink-0 text-muted-foreground">
+                      {s.bundle_order}
+                    </span>
+                    <span className="min-w-0 flex-1 truncate">{s.title}</span>
+                    <StatusPill status={s.status} />
+                  </button>
+                ))}
+              </div>
+            </Block>
+          )}
+
+          <p className="text-xs text-muted-foreground">
+            Aangemaakt {formatDateTime(p.created_at)}
+            {p.decided_at ? ` · beslist ${formatDateTime(p.decided_at)}` : ""}
+            {p.executed_at ? ` · uitgevoerd ${formatDateTime(p.executed_at)}` : ""}
+          </p>
+        </div>
+      )}
+    </DetailPanel>
   );
 }
