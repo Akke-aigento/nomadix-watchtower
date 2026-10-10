@@ -77,6 +77,19 @@ function DashboardPage() {
     onError: (e: Error) => toast.error(e.message),
   });
 
+  const partnersQuery = useQuery({
+    queryKey: ["partners_degraded"],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("integrations")
+        .select("partner, upstream_indicator, upstream_description")
+        .eq("usage_state", "active")
+        .in("upstream_indicator", ["minor", "major", "critical"]);
+      const seen = new Set<string>();
+      return (data ?? []).filter((r) => (seen.has(r.partner) ? false : (seen.add(r.partner), true)));
+    },
+    refetchInterval: 120_000,
+  });
   const incidentsQuery = useIncidents();
   const targets = targetsQuery.data ?? [];
   const incidents = incidentsQuery.data ?? [];
@@ -267,6 +280,16 @@ function DashboardPage() {
                 Erkend · {i.watch_targets?.name} — {i.title}
               </span>
               <span className="shrink-0">tot {formatDateTime(i.acknowledged_until)}</span>
+            </div>
+          ))}
+          {(partnersQuery.data ?? []).map((p) => (
+            <div key={p.partner} className="flex justify-between gap-4">
+              <Link to="/koppelingen" className="truncate hover:text-foreground">
+                Partner · {p.partner} — {p.upstream_description}
+              </Link>
+              <span className="shrink-0" style={{ color: p.upstream_indicator === "minor" ? "var(--warn)" : "var(--crit)" }}>
+                {p.upstream_indicator === "minor" ? "kleine storing" : "storing"}
+              </span>
             </div>
           ))}
           <div className="flex justify-between gap-4">

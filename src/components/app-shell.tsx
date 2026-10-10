@@ -1,16 +1,18 @@
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { Bell, LayoutDashboard, LogOut, Lightbulb, PlusCircle, Siren } from "lucide-react";
+import { Bell, CalendarClock, LayoutDashboard, LogOut, Lightbulb, Plug, PlusCircle, Siren } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 const NAV = [
   { to: "/dashboard", label: "Overzicht", short: "Overzicht", icon: LayoutDashboard },
-  { to: "/alerts", label: "Geschiedenis", short: "Historiek", icon: Siren },
+  { to: "/agenda", label: "Agenda", short: "Agenda", icon: CalendarClock },
+  { to: "/koppelingen", label: "Koppelingen", short: "Koppelingen", icon: Plug },
   { to: "/proposals", label: "Voorstellen", short: "Voorstellen", icon: Lightbulb },
   { to: "/meldingen", label: "Meldingen", short: "Meldingen", icon: Bell },
+  { to: "/alerts", label: "Geschiedenis", short: "Historiek", icon: Siren },
   { to: "/targets/new", label: "Target toevoegen", short: "Nieuw", icon: PlusCircle },
 ] as const;
 
@@ -77,15 +79,15 @@ export function AppShell({ children }: { children: ReactNode }) {
       </div>
 
       <nav
-        className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-4 border-t border-border bg-background/95 pb-[env(safe-area-inset-bottom)] backdrop-blur md:hidden"
+        className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-5 border-t border-border bg-background/95 pb-[env(safe-area-inset-bottom)] backdrop-blur md:hidden"
         aria-label="Hoofdmenu"
       >
-        {NAV.slice(0, 4).map((item) => (
+        {NAV.slice(0, 5).map((item) => (
           <Link
             key={item.to}
             to={item.to}
             className={cn(
-              "flex min-h-14 flex-col items-center justify-center gap-1 text-[11px] text-muted-foreground",
+              "flex min-h-14 flex-col items-center justify-center gap-1 text-[10px] text-muted-foreground",
               pathname === item.to && "text-foreground",
             )}
           >

@@ -12,12 +12,15 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as AuthenticatedAgendaRouteImport } from './routes/_authenticated/agenda'
 import { Route as AuthenticatedAlertsRouteImport } from './routes/_authenticated/alerts'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
+import { Route as AuthenticatedKoppelingenRouteImport } from './routes/_authenticated/koppelingen'
 import { Route as AuthenticatedMeldingenRouteImport } from './routes/_authenticated/meldingen'
 import { Route as AuthenticatedProposalsRouteImport } from './routes/_authenticated/proposals'
 import { Route as AuthenticatedTargetIdRouteImport } from './routes/_authenticated/target.$id'
 import { Route as AuthenticatedTargetsNewRouteImport } from './routes/_authenticated/targets/new'
+import { Route as ApiPublicAgendaDoticsRouteImport } from './routes/api/public/agenda[.]ics'
 import { Route as ApiPublicCheckRouteImport } from './routes/api/public/check'
 import { Route as ApiPublicDailyRollupRouteImport } from './routes/api/public/daily-rollup'
 import { Route as ApiPublicMorningBriefRouteImport } from './routes/api/public/morning-brief'
@@ -39,6 +42,11 @@ const LoginRoute = LoginRouteImport.update({
   path: '/login',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedAgendaRoute = AuthenticatedAgendaRouteImport.update({
+  id: '/agenda',
+  path: '/agenda',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedAlertsRoute = AuthenticatedAlertsRouteImport.update({
   id: '/alerts',
   path: '/alerts',
@@ -49,6 +57,12 @@ const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
   path: '/dashboard',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedKoppelingenRoute =
+  AuthenticatedKoppelingenRouteImport.update({
+    id: '/koppelingen',
+    path: '/koppelingen',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedMeldingenRoute = AuthenticatedMeldingenRouteImport.update({
   id: '/meldingen',
   path: '/meldingen',
@@ -68,6 +82,11 @@ const AuthenticatedTargetsNewRoute = AuthenticatedTargetsNewRouteImport.update({
   id: '/targets/new',
   path: '/targets/new',
   getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const ApiPublicAgendaDoticsRoute = ApiPublicAgendaDoticsRouteImport.update({
+  id: '/api/public/agenda.ics',
+  path: '/api/public/agenda.ics',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const ApiPublicCheckRoute = ApiPublicCheckRouteImport.update({
   id: '/api/public/check',
@@ -103,12 +122,15 @@ const ApiPushTestRoute = ApiPushTestRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
+  '/agenda': typeof AuthenticatedAgendaRoute
   '/alerts': typeof AuthenticatedAlertsRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
+  '/koppelingen': typeof AuthenticatedKoppelingenRoute
   '/meldingen': typeof AuthenticatedMeldingenRoute
   '/proposals': typeof AuthenticatedProposalsRoute
   '/target/$id': typeof AuthenticatedTargetIdRoute
   '/targets/new': typeof AuthenticatedTargetsNewRoute
+  '/api/public/agenda.ics': typeof ApiPublicAgendaDoticsRoute
   '/api/public/check': typeof ApiPublicCheckRoute
   '/api/public/daily-rollup': typeof ApiPublicDailyRollupRoute
   '/api/public/morning-brief': typeof ApiPublicMorningBriefRoute
@@ -119,12 +141,15 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
+  '/agenda': typeof AuthenticatedAgendaRoute
   '/alerts': typeof AuthenticatedAlertsRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
+  '/koppelingen': typeof AuthenticatedKoppelingenRoute
   '/meldingen': typeof AuthenticatedMeldingenRoute
   '/proposals': typeof AuthenticatedProposalsRoute
   '/target/$id': typeof AuthenticatedTargetIdRoute
   '/targets/new': typeof AuthenticatedTargetsNewRoute
+  '/api/public/agenda.ics': typeof ApiPublicAgendaDoticsRoute
   '/api/public/check': typeof ApiPublicCheckRoute
   '/api/public/daily-rollup': typeof ApiPublicDailyRollupRoute
   '/api/public/morning-brief': typeof ApiPublicMorningBriefRoute
@@ -137,12 +162,15 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/login': typeof LoginRoute
+  '/_authenticated/agenda': typeof AuthenticatedAgendaRoute
   '/_authenticated/alerts': typeof AuthenticatedAlertsRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
+  '/_authenticated/koppelingen': typeof AuthenticatedKoppelingenRoute
   '/_authenticated/meldingen': typeof AuthenticatedMeldingenRoute
   '/_authenticated/proposals': typeof AuthenticatedProposalsRoute
   '/_authenticated/target/$id': typeof AuthenticatedTargetIdRoute
   '/_authenticated/targets/new': typeof AuthenticatedTargetsNewRoute
+  '/api/public/agenda.ics': typeof ApiPublicAgendaDoticsRoute
   '/api/public/check': typeof ApiPublicCheckRoute
   '/api/public/daily-rollup': typeof ApiPublicDailyRollupRoute
   '/api/public/morning-brief': typeof ApiPublicMorningBriefRoute
@@ -155,12 +183,15 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/login'
+    | '/agenda'
     | '/alerts'
     | '/dashboard'
+    | '/koppelingen'
     | '/meldingen'
     | '/proposals'
     | '/target/$id'
     | '/targets/new'
+    | '/api/public/agenda.ics'
     | '/api/public/check'
     | '/api/public/daily-rollup'
     | '/api/public/morning-brief'
@@ -171,12 +202,15 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/login'
+    | '/agenda'
     | '/alerts'
     | '/dashboard'
+    | '/koppelingen'
     | '/meldingen'
     | '/proposals'
     | '/target/$id'
     | '/targets/new'
+    | '/api/public/agenda.ics'
     | '/api/public/check'
     | '/api/public/daily-rollup'
     | '/api/public/morning-brief'
@@ -188,12 +222,15 @@ export interface FileRouteTypes {
     | '/'
     | '/_authenticated'
     | '/login'
+    | '/_authenticated/agenda'
     | '/_authenticated/alerts'
     | '/_authenticated/dashboard'
+    | '/_authenticated/koppelingen'
     | '/_authenticated/meldingen'
     | '/_authenticated/proposals'
     | '/_authenticated/target/$id'
     | '/_authenticated/targets/new'
+    | '/api/public/agenda.ics'
     | '/api/public/check'
     | '/api/public/daily-rollup'
     | '/api/public/morning-brief'
@@ -206,6 +243,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   LoginRoute: typeof LoginRoute
+  ApiPublicAgendaDoticsRoute: typeof ApiPublicAgendaDoticsRoute
   ApiPublicCheckRoute: typeof ApiPublicCheckRoute
   ApiPublicDailyRollupRoute: typeof ApiPublicDailyRollupRoute
   ApiPublicMorningBriefRoute: typeof ApiPublicMorningBriefRoute
@@ -237,6 +275,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LoginRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated/agenda': {
+      id: '/_authenticated/agenda'
+      path: '/agenda'
+      fullPath: '/agenda'
+      preLoaderRoute: typeof AuthenticatedAgendaRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/alerts': {
       id: '/_authenticated/alerts'
       path: '/alerts'
@@ -249,6 +294,13 @@ declare module '@tanstack/react-router' {
       path: '/dashboard'
       fullPath: '/dashboard'
       preLoaderRoute: typeof AuthenticatedDashboardRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/koppelingen': {
+      id: '/_authenticated/koppelingen'
+      path: '/koppelingen'
+      fullPath: '/koppelingen'
+      preLoaderRoute: typeof AuthenticatedKoppelingenRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/meldingen': {
@@ -278,6 +330,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/targets/new'
       preLoaderRoute: typeof AuthenticatedTargetsNewRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/api/public/agenda.ics': {
+      id: '/api/public/agenda.ics'
+      path: '/api/public/agenda.ics'
+      fullPath: '/api/public/agenda.ics'
+      preLoaderRoute: typeof ApiPublicAgendaDoticsRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/api/public/check': {
       id: '/api/public/check'
@@ -325,8 +384,10 @@ declare module '@tanstack/react-router' {
 }
 
 interface AuthenticatedRouteRouteChildren {
+  AuthenticatedAgendaRoute: typeof AuthenticatedAgendaRoute
   AuthenticatedAlertsRoute: typeof AuthenticatedAlertsRoute
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
+  AuthenticatedKoppelingenRoute: typeof AuthenticatedKoppelingenRoute
   AuthenticatedMeldingenRoute: typeof AuthenticatedMeldingenRoute
   AuthenticatedProposalsRoute: typeof AuthenticatedProposalsRoute
   AuthenticatedTargetIdRoute: typeof AuthenticatedTargetIdRoute
@@ -334,8 +395,10 @@ interface AuthenticatedRouteRouteChildren {
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
+  AuthenticatedAgendaRoute: AuthenticatedAgendaRoute,
   AuthenticatedAlertsRoute: AuthenticatedAlertsRoute,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
+  AuthenticatedKoppelingenRoute: AuthenticatedKoppelingenRoute,
   AuthenticatedMeldingenRoute: AuthenticatedMeldingenRoute,
   AuthenticatedProposalsRoute: AuthenticatedProposalsRoute,
   AuthenticatedTargetIdRoute: AuthenticatedTargetIdRoute,
@@ -349,6 +412,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   LoginRoute: LoginRoute,
+  ApiPublicAgendaDoticsRoute: ApiPublicAgendaDoticsRoute,
   ApiPublicCheckRoute: ApiPublicCheckRoute,
   ApiPublicDailyRollupRoute: ApiPublicDailyRollupRoute,
   ApiPublicMorningBriefRoute: ApiPublicMorningBriefRoute,

@@ -28,6 +28,7 @@ import {
 import { checkName, decide, describe, isCheckDue, targetStatus, type Severity } from "@/lib/policy";
 import { anyDelivered, pushToAll } from "@/lib/notify.server";
 import { closeProposalsFor, ensureProposal } from "@/lib/proposals.server";
+import { degradedPartners, refreshPartnerStatus, upstreamLine } from "@/lib/partners.server";
 
 export type { CheckOutcome, CheckStatus } from "@/lib/checks.server";
 
@@ -161,6 +162,8 @@ async function notifyIncident(
   title: string,
   summary: string,
 ): Promise<{ mailed: boolean; pushed: boolean }> {
+  const upstream = kind === "open" ? upstreamLine(await degradedPartners().catch(() => [])) : "";
+  if (upstream) summary = `${summary}${summary ? " " : ""}Let op, partnerstoring: ${upstream}.`;
   const m = incidentMail(target, title, kind === "resolved" ? "Terug in orde." : summary, kind === "resolved");
   const [mailed, pushResults] = await Promise.all([
     sendAlertMail(m.subject, m.html),
@@ -395,8 +398,19 @@ export async function runScans() {
   }
 
   const reminders = await sendReminders(new Map(((targets ?? []) as Target[]).map((t) => [t.id, t])));
+  const partners = await refreshPartnerStatus().catch((e) => {
+    console.error("partnerstatus", e);
+    return { checked: 0, degraded: [] };
+  });
 
-  return { engine: "v2", scanned_count: scanned.length, reminders, scanned };
+  return {
+    engine: "v2",
+    scanned_count: scanned.length,
+    reminders,
+    partners_checked: partners.checked,
+    partners_degraded: partners.degraded.map((d) => `${d.partner}: ${d.indicator}`),
+    scanned,
+  };
 }
 
 export async function dailyRollup() {

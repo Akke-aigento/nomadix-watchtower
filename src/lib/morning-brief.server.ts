@@ -249,27 +249,27 @@ export async function morningBrief(opts: { dryRun?: boolean; week?: boolean } = 
     sections.push("sinds_gisteren");
   }
 
-  // Komt eraan: certificaten (≤30 d) en domeinnamen (≤60 d)
-  const upcoming = (ssl ?? [])
-    .filter((r) => r.check_key === "ssl" || r.check_key === "domain")
-    .map((r) => ({ r, d: (r.detail ?? {}) as { days_left?: number; host?: string; domain?: string } }))
-    .filter(
-      (x) =>
-        typeof x.d.days_left === "number" &&
-        x.d.days_left >= 0 &&
-        x.d.days_left <= (x.r.check_key === "domain" ? 60 : 30),
-    )
-    .sort((a, b) => (a.d.days_left ?? 0) - (b.d.days_left ?? 0));
+  // Komt eraan: alles uit de agenda dat te laat is of binnen 45 dagen valt (info pas vanaf 14 dagen).
+  const { data: agendaRows } = await supabaseAdmin
+    .from("agenda")
+    .select("title, due_date, severity, kind")
+    .eq("status", "open")
+    .lte("due_date", new Date(now.getTime() + 45 * 86400000).toISOString().slice(0, 10))
+    .order("due_date");
+  const upcoming = (agendaRows ?? [])
+    .map((a) => ({ ...a, days: Math.round((Date.parse(a.due_date) - Date.parse(now.toISOString().slice(0, 10))) / 86400000) }))
+    .filter((a) => a.severity !== "info" || a.days <= 14);
   if (upcoming.length) {
     blocks.push(
       card(
         label("Komt eraan") +
           upcoming
             .map(
-              (x) =>
-                `<div style="font:400 15px/1.5 Arial,sans-serif;color:${C.body};margin-bottom:6px"><span style="display:inline-block;width:78px;font-family:ui-monospace,Menlo,Consolas,monospace;color:${C.muted}">${x.d.days_left} d</span>${x.r.check_key === "domain" ? "Domeinnaam" : "Certificaat"} ${esc(x.d.domain ?? x.d.host ?? nameOf.get(x.r.target_id) ?? "")}</div>`,
+              (a) =>
+                `<div style="font:400 15px/1.5 Arial,sans-serif;color:${C.body};margin-bottom:6px"><span style="display:inline-block;width:78px;font-family:ui-monospace,Menlo,Consolas,monospace;color:${a.days < 0 ? C.actieText : C.muted}">${a.days < 0 ? `${-a.days} d te laat` : `${a.days} d`}</span>${esc(a.title)}</div>`,
             )
-            .join(""),
+            .join("") +
+          `<div style="font:400 13px/1.5 Arial,sans-serif;color:${C.muted};margin-top:8px"><a href="${DASHBOARD_URL}/agenda" style="color:${C.muted}">Volledige agenda</a></div>`,
       ),
     );
     sections.push("komt_eraan");
@@ -310,6 +310,9 @@ export async function morningBrief(opts: { dryRun?: boolean; week?: boolean } = 
   for (const i of acked) {
     foot.push(`Erkend: ${esc(nameOf.get(i.target_id) ?? "")} · ${esc(i.title)} tot ${esc(brusselsDate(new Date(i.acknowledged_until!), { day: "numeric", month: "short" }))}`);
   }
+  const { degradedPartners, upstreamLine } = await import("@/lib/partners.server");
+  const partnerLine = upstreamLine(await degradedPartners().catch(() => []));
+  if (partnerLine) foot.push(`Partners: ${esc(partnerLine)}`);
   if (monitor.length) {
     foot.push(`Zelfcontrole: ${monitor.length} meting(en) lukken al een tijd niet — ${esc(monitor.map((i) => nameOf.get(i.target_id)).join(", "))}`);
   } else {

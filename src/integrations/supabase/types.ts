@@ -14,6 +14,54 @@ export type Database = {
   }
   public: {
     Tables: {
+      agenda_items: {
+        Row: {
+          id: string
+          fingerprint: string
+          title: string
+          description: string | null
+          due_date: string
+          kind: string
+          severity: string
+          integration_key: string | null
+          target_id: string | null
+          source_url: string | null
+          status: string
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          fingerprint: string
+          title: string
+          description?: string | null
+          due_date: string
+          kind?: string
+          severity?: string
+          integration_key?: string | null
+          target_id?: string | null
+          source_url?: string | null
+          status?: string
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          fingerprint?: string
+          title?: string
+          description?: string | null
+          due_date?: string
+          kind?: string
+          severity?: string
+          integration_key?: string | null
+          target_id?: string | null
+          source_url?: string | null
+          status?: string
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       alert_log: {
         Row: {
           check_key: string
@@ -86,6 +134,114 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      integration_usages: {
+        Row: {
+          id: string
+          integration_key: string
+          repo: string
+          file: string
+          version: string
+          occurrences: number
+          scanned_at: string
+        }
+        Insert: {
+          id?: string
+          integration_key: string
+          repo: string
+          file: string
+          version?: string
+          occurrences?: number
+          scanned_at?: string
+        }
+        Update: {
+          id?: string
+          integration_key?: string
+          repo?: string
+          file?: string
+          version?: string
+          occurrences?: number
+          scanned_at?: string
+        }
+        Relationships: []
+      }
+      integrations: {
+        Row: {
+          id: string
+          key: string
+          name: string
+          partner: string
+          category: string
+          used_version: string | null
+          latest_version: string | null
+          usage_state: string
+          active_tenants: number | null
+          last_activity_at: string | null
+          risk: string
+          risk_note: string | null
+          discovered_via: string
+          discovered_at: string
+          last_seen_at: string
+          docs_url: string | null
+          changelog_url: string | null
+          status_page_url: string | null
+          upstream_indicator: string | null
+          upstream_description: string | null
+          upstream_checked_at: string | null
+          radar_checked_at: string | null
+          notes: string | null
+        }
+        Insert: {
+          id?: string
+          key: string
+          name: string
+          partner: string
+          category?: string
+          used_version?: string | null
+          latest_version?: string | null
+          usage_state?: string
+          active_tenants?: number | null
+          last_activity_at?: string | null
+          risk?: string
+          risk_note?: string | null
+          discovered_via?: string
+          discovered_at?: string
+          last_seen_at?: string
+          docs_url?: string | null
+          changelog_url?: string | null
+          status_page_url?: string | null
+          upstream_indicator?: string | null
+          upstream_description?: string | null
+          upstream_checked_at?: string | null
+          radar_checked_at?: string | null
+          notes?: string | null
+        }
+        Update: {
+          id?: string
+          key?: string
+          name?: string
+          partner?: string
+          category?: string
+          used_version?: string | null
+          latest_version?: string | null
+          usage_state?: string
+          active_tenants?: number | null
+          last_activity_at?: string | null
+          risk?: string
+          risk_note?: string | null
+          discovered_via?: string
+          discovered_at?: string
+          last_seen_at?: string
+          docs_url?: string | null
+          changelog_url?: string | null
+          status_page_url?: string | null
+          upstream_indicator?: string | null
+          upstream_description?: string | null
+          upstream_checked_at?: string | null
+          radar_checked_at?: string | null
+          notes?: string | null
+        }
+        Relationships: []
       }
       incident_events: {
         Row: {
@@ -379,13 +535,30 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      agenda: {
+        Row: {
+          id: string
+          title: string
+          description: string | null
+          due_date: string
+          kind: string
+          severity: string
+          integration_key: string | null
+          target_id: string | null
+          source_url: string | null
+          status: string
+          origin: string
+        }
+        Relationships: []
+      }
     }
     Functions: {
+      get_agenda_token: { Args: never; Returns: string }
       get_cron_secret: { Args: never; Returns: string }
       get_heartbeat_url: { Args: never; Returns: string }
       get_vapid_private_jwk: { Args: never; Returns: string }
       is_watchtower_admin: { Args: never; Returns: boolean }
+      wt_ingest_scan: { Args: { scan: Json }; Returns: Json }
       wt_daily_check_status: {
         Args: { p_target: string; p_days?: number }
         Returns: {
