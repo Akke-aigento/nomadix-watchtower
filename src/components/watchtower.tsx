@@ -24,6 +24,7 @@ export const CHECK_LABEL: Record<string, string> = {
   health: "Health",
   domain: "Domein",
   store: "Winkel",
+  odoo: "Odoo",
 };
 
 export const CATEGORY_LABEL: Record<string, string> = {

@@ -20,6 +20,8 @@ export function checkIntervalMs(checkKey: string, target: TargetLike): number {
     case "health":
     case "store":
       return 8 * MIN;
+    case "odoo":
+      return 55 * MIN;
     case "http":
       return target.kind === "platform" || target.kind === "storefront" ? 8 * MIN : 55 * MIN;
     case "ssl":
@@ -45,7 +47,7 @@ export function isCheckDue(
 /** Hoeveel opeenvolgende slechte metingen nodig zijn voor een incident. */
 export function confirmationsNeeded(checkKey: string, status: "warn" | "fail"): number {
   if (checkKey === "http") return status === "fail" ? 2 : 3;
-  if (checkKey === "health" || checkKey === "store") return 2;
+  if (checkKey === "health" || checkKey === "store" || checkKey === "odoo") return 2;
   return 1; // ssl/dns/form_smoke: dagelijkse checks, één meting volstaat
 }
 
@@ -123,6 +125,7 @@ const CHECK_NAME: Record<string, string> = {
   form_smoke: "Formulier",
   domain: "Domeinnaam",
   store: "Winkel",
+  odoo: "Odoo-API",
 };
 
 export function checkName(checkKey: string): string {
@@ -170,6 +173,8 @@ export function statusLine(checkKey: string, status: CheckStatus, detail: unknow
       return typeof d.days_left === "number" ? `Nog ${d.days_left} dagen geldig` : "Geldig";
     case "dns":
       return "SPF en DMARC staan goed";
+    case "odoo":
+      return `Versie ${d.serie ?? "?"} · oud /jsonrpc-adres werkt nog${d.json2_exists ? " · JSON-2 beschikbaar" : ""}`;
     case "store":
       return `${d.products_visible ?? "?"}+ producten zichtbaar, ${d.shipping_methods ?? "?"} verzendmethode(s) — afrekenen kan`;
     case "domain":
@@ -238,6 +243,15 @@ export function describe(
             .join(" · "),
         ).slice(0, 300),
       };
+    }
+    case "odoo": {
+      const v = typeof d.serie === "string" ? ` (versie ${d.serie})` : "";
+      if (d.issue === "jsonrpc_removed")
+        return { title: "Odoo heeft /jsonrpc geschrapt", summary: `De SellQo-boekhoudsync (facturen, Peppol) werkt niet meer${v}. Migratie naar JSON-2 nodig.` };
+      if (d.issue === "odoo_down") return { title: "Odoo onbereikbaar", summary: typeof d.error === "string" ? d.error : `HTTP ${d.jsonrpc_status ?? "?"}` };
+      if (d.issue === "deprecated_major")
+        return { title: `Odoo staat op versie ${d.major}: /jsonrpc op de schrapbank`, summary: `Werkt nog, maar kan elk moment verdwijnen${v}. Migreer de sync naar JSON-2.` };
+      return { title: "Odoo-API meldt een probleem", summary: "" };
     }
     case "store": {
       if (typeof d.error === "string") return { title: "Winkel-API werkt niet", summary: `${d.error} — klanten zien geen producten of kunnen niet afrekenen` };

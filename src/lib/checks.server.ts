@@ -431,6 +431,58 @@ export async function checkStore(tenantId: string, fetcher: Fetcher = fetch): Pr
   }
 }
 
+// ---------------------------------------------------------------- odoo (API-kanarie)
+
+/**
+ * Bestaat het oude /jsonrpc-adres nog, en op welke versie draait de database?
+ * Beide zonder login. Odoo schrapt /xmlrpc + /jsonrpc vanaf Odoo 20; JSON-2 (/json/2) is de opvolger.
+ *  - fail : /jsonrpc weg (404/geen result) → SellQo-boekhoudsync ligt plat
+ *  - warn : database op 20+ terwijl /jsonrpc nog antwoordt → op de schrapbank, migreren
+ *  - ok   : /jsonrpc leeft, versie < 20
+ */
+export async function checkOdoo(baseUrl: string, fetcher: Fetcher = fetch): Promise<CheckOutcome> {
+  const started = Date.now();
+  const base = baseUrl.replace(/\/$/, "");
+  const call = async (path: string, body: unknown) => {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 15000);
+    try {
+      const res = await fetcher(`${base}${path}`, {
+        method: "POST",
+        signal: controller.signal,
+        headers: { "content-type": "application/json", "user-agent": UA },
+        body: JSON.stringify(body),
+      });
+      const json = (await res.json().catch(() => null)) as { result?: { server_serie?: string; server_version?: string } } | null;
+      return { status: res.status, result: json?.result ?? null };
+    } finally {
+      clearTimeout(timer);
+    }
+  };
+  try {
+    const [rpc, json2] = await Promise.all([
+      call("/jsonrpc", { jsonrpc: "2.0", method: "call", params: { service: "common", method: "version", args: [] } }),
+      call("/json/2/res.users/context_get", {}),
+    ]);
+    const latency = Date.now() - started;
+    const serie = rpc.result?.server_serie ?? null;
+    const major = serie ? Number((serie.match(/(\d+)/) ?? [])[1]) : null;
+    const rpcAlive = rpc.status === 200 && !!rpc.result;
+    const json2Exists = json2.status === 401 || json2.status === 200;
+    const detail = { url: base, serie, major, jsonrpc_alive: rpcAlive, jsonrpc_status: rpc.status, json2_exists: json2Exists };
+    if (!rpcAlive) {
+      // Ligt heel Odoo plat (5xx/timeout) of enkel /jsonrpc weg? Beide breken de sync.
+      return { check_key: "odoo", status: "fail", latency_ms: latency, detail: { ...detail, issue: rpc.status >= 500 ? "odoo_down" : "jsonrpc_removed" } };
+    }
+    if (major !== null && major >= 20) {
+      return { check_key: "odoo", status: "warn", latency_ms: latency, detail: { ...detail, issue: "deprecated_major" } };
+    }
+    return { check_key: "odoo", status: "ok", latency_ms: latency, detail };
+  } catch (e) {
+    return { check_key: "odoo", status: "fail", latency_ms: Date.now() - started, detail: { url: base, error: errMsg(e), issue: "odoo_down" } };
+  }
+}
+
 // ---------------------------------------------------------------- health
 
 export async function checkHealth(

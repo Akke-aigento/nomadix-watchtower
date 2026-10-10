@@ -22,6 +22,7 @@ import {
   checkHttp,
   checkSsl,
   checkStore,
+  checkOdoo,
   type CheckOutcome,
   type CheckStatus,
 } from "@/lib/checks.server";
@@ -104,6 +105,7 @@ export function enabledChecks(t: Target): string[] {
   if (c.health && t.health_url) list.push("health");
   if (c.domain !== false && supportsDomainCheck(hostOf(t.url))) list.push("domain");
   if (c.store !== false && t.sellqo_tenant_id) list.push("store");
+  if (c.odoo) list.push("odoo");
   return list;
 }
 
@@ -123,6 +125,8 @@ function runCheck(t: Target, key: string): Promise<CheckOutcome> {
       return checkDomain(t.url);
     case "store":
       return checkStore(t.sellqo_tenant_id!);
+    case "odoo":
+      return checkOdoo(t.url);
     default:
       throw new Error(`onbekende check ${key}`);
   }

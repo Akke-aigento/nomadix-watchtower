@@ -10,6 +10,7 @@ const PROMISE: Record<string, string> = {
   form_smoke: "Formulier bereikbaar",
   domain: "Domeinnaam verlengd",
   store: "Klanten kunnen kopen",
+  odoo: "Boekhoudsync kan Odoo bereiken",
 };
 
 type Day = { day: string; check_key: string; ok: number; warn: number; fail: number; unknown: number };
