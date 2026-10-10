@@ -114,6 +114,28 @@ async function draftFor(target: Target, o: CheckOutcome): Promise<Draft | null> 
         };
       return null;
     }
+    case "store": {
+      const what =
+        typeof d.error === "string"
+          ? `de storefront-API faalt (${d.error})`
+          : d.issue === "no_shipping"
+            ? "er geen verzendmethode naar België is"
+            : d.issue === "no_products"
+              ? "er geen producten zichtbaar zijn"
+              : "producten geen prijs hebben";
+      return {
+        fingerprint: `store:${typeof d.error === "string" ? "api" : String(d.issue)}`,
+        category: "bug",
+        title: `${target.name}: klanten kunnen niet kopen`,
+        description: `Watchtower test elke 10 minuten of een klant kan kopen bij ${target.name}. Nu faalt dat omdat ${what}.`,
+        proposed_action:
+          typeof d.error === "string"
+            ? "Edge function storefront-api in SellQo nakijken (logs), bij een kapotte deploy de vorige versie herdeployen via de Lovable-agent (deploy-only opdracht, met STOP-clausule)."
+            : d.issue === "no_shipping"
+              ? "In SellQo-admin van deze tenant de verzendmethodes en verzendlanden nakijken (BE moet aan staan)."
+              : "In SellQo-admin van deze tenant nakijken of producten actief/gepubliceerd zijn en een prijs hebben.",
+      };
+    }
     case "domain":
       return {
         fingerprint: "domain:expiry",

@@ -23,6 +23,7 @@ export const CHECK_LABEL: Record<string, string> = {
   form_smoke: "Formulier",
   health: "Health",
   domain: "Domein",
+  store: "Winkel",
 };
 
 export const CATEGORY_LABEL: Record<string, string> = {

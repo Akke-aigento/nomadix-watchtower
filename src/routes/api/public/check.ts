@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 
 /**
  * Diagnose: draai één check live zonder iets op te slaan.
- * GET /api/public/check?url=https://…&check=http|ssl|dns|domain   (x-cron-secret)
+ * GET /api/public/check?url=https://…&check=http|ssl|dns|domain|store  (store: url = tenant-id)   (x-cron-secret)
  */
 export const Route = createFileRoute("/api/public/check")({
   server: {
@@ -16,7 +16,7 @@ export const Route = createFileRoute("/api/public/check")({
         const check = params.get("check") ?? "http";
         if (!url) return Response.json({ error: "url ontbreekt" }, { status: 400 });
         const c = await import("@/lib/checks.server");
-        const fn = { http: c.checkHttp, ssl: c.checkSsl, dns: c.checkDns, domain: c.checkDomain }[check];
+        const fn = { http: c.checkHttp, ssl: c.checkSsl, dns: c.checkDns, domain: c.checkDomain, store: c.checkStore }[check];
         if (!fn) return Response.json({ error: `onbekende check ${check}` }, { status: 400 });
         const started = Date.now();
         const outcome = await fn(url);

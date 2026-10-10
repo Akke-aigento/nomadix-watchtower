@@ -21,6 +21,7 @@ import {
   checkHealth,
   checkHttp,
   checkSsl,
+  checkStore,
   type CheckOutcome,
   type CheckStatus,
 } from "@/lib/checks.server";
@@ -75,6 +76,7 @@ type Target = {
   health_url: string | null;
   health_token: string | null;
   lovable_project_id: string | null;
+  sellqo_tenant_id: string | null;
   status: string;
 };
 
@@ -100,6 +102,7 @@ export function enabledChecks(t: Target): string[] {
   if (c.form_smoke && t.form_smoke_url) list.push("form_smoke");
   if (c.health && t.health_url) list.push("health");
   if (c.domain !== false && supportsDomainCheck(hostOf(t.url))) list.push("domain");
+  if (c.store !== false && t.sellqo_tenant_id) list.push("store");
   return list;
 }
 
@@ -117,6 +120,8 @@ function runCheck(t: Target, key: string): Promise<CheckOutcome> {
       return checkHealth(t.health_url!, t.health_token);
     case "domain":
       return checkDomain(t.url);
+    case "store":
+      return checkStore(t.sellqo_tenant_id!);
     default:
       throw new Error(`onbekende check ${key}`);
   }

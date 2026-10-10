@@ -348,6 +348,85 @@ export async function checkDomain(url: string, fetcher: Fetcher = fetch): Promis
   }
 }
 
+// ---------------------------------------------------------------- winkel (SellQo storefront)
+
+export const SELLQO_STOREFRONT_API = "https://gczmfcabnoofnmfpzeop.supabase.co/functions/v1/storefront-api";
+
+async function storefront(
+  action: string,
+  tenantId: string,
+  params: Record<string, unknown>,
+  fetcher: Fetcher,
+): Promise<{ ok: boolean; status: number; data: unknown; error?: string }> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 15000);
+  try {
+    const res = await fetcher(SELLQO_STOREFRONT_API, {
+      method: "POST",
+      signal: controller.signal,
+      headers: { "content-type": "application/json", "user-agent": UA },
+      body: JSON.stringify({ action, tenant_id: tenantId, params }),
+    });
+    const json = (await res.json().catch(() => ({}))) as { success?: boolean; data?: unknown; error?: unknown };
+    const err = typeof json.error === "string" ? json.error : json.error ? JSON.stringify(json.error) : undefined;
+    return { ok: res.ok && json.success === true, status: res.status, data: json.data, error: err };
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+/**
+ * Kan een klant kopen? Enkel leesacties (geen cart, geen order):
+ * producten met prijs zichtbaar + minstens één verzendmethode naar BE.
+ */
+export async function checkStore(tenantId: string, fetcher: Fetcher = fetch): Promise<CheckOutcome> {
+  const started = Date.now();
+  try {
+    const [products, shipping] = await Promise.all([
+      storefront("get_products", tenantId, { per_page: 3 }, fetcher),
+      storefront("get_shipping_methods", tenantId, { country: "BE" }, fetcher),
+    ]);
+    const latency = Date.now() - started;
+    if (products.status === 429 || shipping.status === 429) {
+      return { check_key: "store", status: "unknown", latency_ms: latency, detail: { error: "rate limit storefront-api" } };
+    }
+    if (!products.ok || !shipping.ok) {
+      return {
+        check_key: "store",
+        status: "fail",
+        latency_ms: latency,
+        detail: {
+          error: products.ok ? `verzendmethodes: HTTP ${shipping.status} ${shipping.error ?? ""}`.trim() : `producten: HTTP ${products.status} ${products.error ?? ""}`.trim(),
+        },
+      };
+    }
+    const list = ((products.data as { products?: Array<{ price?: number | null }> })?.products ?? []) as Array<{ price?: number | null }>;
+    const withPrice = list.filter((p) => typeof p.price === "number" && p.price > 0).length;
+    const methods = Array.isArray(shipping.data) ? shipping.data.length : 0;
+    let status: CheckStatus = "ok";
+    let issue: string | null = null;
+    if (!list.length) {
+      status = "fail";
+      issue = "no_products";
+    } else if (!methods) {
+      status = "fail";
+      issue = "no_shipping";
+    } else if (!withPrice) {
+      status = "warn";
+      issue = "no_prices";
+    }
+    return {
+      check_key: "store",
+      status,
+      latency_ms: latency,
+      detail: { products_visible: list.length, with_price: withPrice, shipping_methods: methods, issue },
+    };
+  } catch (e) {
+    // Onze eigen fetch faalde (timeout naar Supabase): dat is SellQo zelf.
+    return { check_key: "store", status: "fail", latency_ms: Date.now() - started, detail: { error: errMsg(e) } };
+  }
+}
+
 // ---------------------------------------------------------------- health
 
 export async function checkHealth(

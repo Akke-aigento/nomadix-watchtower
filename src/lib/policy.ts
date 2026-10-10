@@ -18,6 +18,7 @@ const HOUR = 60 * MIN;
 export function checkIntervalMs(checkKey: string, target: TargetLike): number {
   switch (checkKey) {
     case "health":
+    case "store":
       return 8 * MIN;
     case "http":
       return target.kind === "platform" || target.kind === "storefront" ? 8 * MIN : 55 * MIN;
@@ -44,7 +45,7 @@ export function isCheckDue(
 /** Hoeveel opeenvolgende slechte metingen nodig zijn voor een incident. */
 export function confirmationsNeeded(checkKey: string, status: "warn" | "fail"): number {
   if (checkKey === "http") return status === "fail" ? 2 : 3;
-  if (checkKey === "health") return 2;
+  if (checkKey === "health" || checkKey === "store") return 2;
   return 1; // ssl/dns/form_smoke: dagelijkse checks, één meting volstaat
 }
 
@@ -121,6 +122,7 @@ const CHECK_NAME: Record<string, string> = {
   health: "Health",
   form_smoke: "Formulier",
   domain: "Domeinnaam",
+  store: "Winkel",
 };
 
 export function checkName(checkKey: string): string {
@@ -162,6 +164,8 @@ export function statusLine(checkKey: string, status: CheckStatus, detail: unknow
       return typeof d.days_left === "number" ? `Nog ${d.days_left} dagen geldig` : "Geldig";
     case "dns":
       return "SPF en DMARC staan goed";
+    case "store":
+      return `${d.products_visible ?? "?"}+ producten zichtbaar, ${d.shipping_methods ?? "?"} verzendmethode(s) — afrekenen kan`;
     case "domain":
       return typeof d.expires_at === "string" ? `Geregistreerd tot ${new Date(d.expires_at).toLocaleDateString("nl-BE")}` : "Geregistreerd";
     case "health":
@@ -228,6 +232,13 @@ export function describe(
             .join(" · "),
         ).slice(0, 300),
       };
+    }
+    case "store": {
+      if (typeof d.error === "string") return { title: "Winkel-API werkt niet", summary: `${d.error} — klanten zien geen producten of kunnen niet afrekenen` };
+      if (d.issue === "no_products") return { title: "Geen producten zichtbaar in de winkel", summary: "de storefront geeft een lege productlijst" };
+      if (d.issue === "no_shipping") return { title: "Geen verzendmethode naar België", summary: "klanten kunnen niet afrekenen" };
+      if (d.issue === "no_prices") return { title: "Producten zonder prijs", summary: "de eerste producten in de winkel hebben geen prijs" };
+      return { title: "Winkel meldt een probleem", summary: "" };
     }
     case "domain": {
       const days = typeof d.days_left === "number" ? d.days_left : null;

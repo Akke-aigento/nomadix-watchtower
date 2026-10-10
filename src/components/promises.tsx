@@ -9,6 +9,7 @@ const PROMISE: Record<string, string> = {
   health: "Werkt van binnen (health)",
   form_smoke: "Formulier bereikbaar",
   domain: "Domeinnaam verlengd",
+  store: "Klanten kunnen kopen",
 };
 
 type Day = { day: string; check_key: string; ok: number; warn: number; fail: number; unknown: number };

@@ -322,6 +322,7 @@ export type Database = {
       }
       watch_targets: {
         Row: {
+          sellqo_tenant_id: string | null
           checks: Json
           created_at: string
           enabled: boolean
@@ -339,6 +340,7 @@ export type Database = {
           url: string
         }
         Insert: {
+          sellqo_tenant_id?: string | null
           checks?: Json
           created_at?: string
           enabled?: boolean
@@ -356,6 +358,7 @@ export type Database = {
           url: string
         }
         Update: {
+          sellqo_tenant_id?: string | null
           checks?: Json
           created_at?: string
           enabled?: boolean
