@@ -65,13 +65,14 @@ export const Route = createFileRoute("/api/baken")({
       GET: async () => {
         const { elevenKey } = await import("@/lib/baken-auth.server");
         return Response.json({
-          baken: "v2",
+          baken: "v3",
           model: process.env.OPENAI_API_KEY
             ? "openai"
             : process.env.LOVABLE_API_KEY
               ? "lovable"
               : null,
           voice: elevenKey() ? "elevenlabs" : null,
+          listen: elevenKey() ? "elevenlabs" : process.env.LOVABLE_API_KEY ? "model" : null,
         });
       },
       POST: async ({ request }) => {

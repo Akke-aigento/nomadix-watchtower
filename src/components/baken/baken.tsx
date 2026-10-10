@@ -154,6 +154,7 @@ function BakenExperience({ onClose }: { onClose: () => void }) {
   const [sound, setSound] = useState(true);
   const [listening, setListening] = useState(false);
   const [proposal, setProposal] = useState<string | null>(null);
+  const [hint, setHint] = useState<string | null>(null);
   const idRef = useRef(1);
   const scroller = useRef<HTMLDivElement>(null);
   const soundRef = useRef(sound);
@@ -176,30 +177,38 @@ function BakenExperience({ onClose }: { onClose: () => void }) {
     ]);
   }, []);
 
+  const stopConvo = useCallback(() => {
+    convo.current = false;
+    setConvoOn(false);
+  }, []);
+
   const startListening = useCallback(() => {
     setListening(true);
     setMood("luistert");
     void voice.listen({
       level: setLevel,
+      thinking: () => {
+        setListening(false);
+        setMood("denkt");
+      },
       heard: (t) => {
         setListening(false);
         sendRef.current(t);
       },
-      done: () => {
+      empty: () => {
         setListening(false);
         setMood("rust");
-        convo.current = false;
-        setConvoOn(false);
+        stopConvo();
+        setHint("Ik hoorde niks. Tik op het baken als je iets wil vragen.");
       },
       error: (m) => {
         setListening(false);
         setMood("rust");
-        convo.current = false;
-        setConvoOn(false);
+        stopConvo();
         say(m);
       },
     });
-  }, [say]);
+  }, [say, stopConvo]);
 
   const speak = useCallback(
     (text: string) => {
@@ -230,9 +239,13 @@ function BakenExperience({ onClose }: { onClose: () => void }) {
     [speak],
   );
 
-  // Begroeting: meteen de stand van vandaag.
+  // Begroeting: Baken groet, vat vandaag samen en luistert daarna meteen (gespreksmodus staat aan).
   useEffect(() => {
     let alive = true;
+    if (canListen) {
+      convo.current = true;
+      setConvoOn(true);
+    }
     greet()
       .then((r) => alive && push(r))
       .catch(() => alive && setMood("rust"));
@@ -252,6 +265,7 @@ function BakenExperience({ onClose }: { onClose: () => void }) {
   const send = async (q: string) => {
     const text = q.trim();
     if (!text) return;
+    setHint(null);
     setInput("");
     voice.stop();
     const history = turns.map((t) => ({
@@ -272,22 +286,15 @@ function BakenExperience({ onClose }: { onClose: () => void }) {
   };
   sendRef.current = (q) => void send(q);
 
-  /** Microfoonknop: één vraag inspreken. */
-  const toggleMic = () => {
+  /**
+   * Tik op het baken of de microfoon: praat Baken, dan onderbreek je hem en luistert hij;
+   * luistert hij, dan stopt het gesprek; anders start het gesprek.
+   */
+  const tapTalk = () => {
     voice.unlock();
+    setHint(null);
     if (listening) {
-      voice.stop();
-      return;
-    }
-    startListening();
-  };
-
-  /** Tik op het baken: gespreksmodus aan of uit (luisteren → antwoorden → weer luisteren). */
-  const toggleConvo = () => {
-    voice.unlock();
-    if (convo.current) {
-      convo.current = false;
-      setConvoOn(false);
+      stopConvo();
       voice.stop();
       setListening(false);
       setMood("rust");
@@ -297,6 +304,8 @@ function BakenExperience({ onClose }: { onClose: () => void }) {
     setConvoOn(true);
     startListening();
   };
+  const toggleMic = tapTalk;
+  const toggleConvo = tapTalk;
 
   const last = [...turns].reverse().find((t) => t.role === "baken");
   const label = { rust: "Baken", luistert: "Ik luister…", denkt: "Even kijken…", praat: "Baken" }[
@@ -370,7 +379,12 @@ function BakenExperience({ onClose }: { onClose: () => void }) {
             <div className="mt-1 text-sm font-semibold tracking-wide text-white/70">{label}</div>
             {canListen && (
               <div className="mt-0.5 text-[12px] text-white/40">
-                {convoOn ? "Gesprek loopt · tik om te stoppen" : "Tik op het baken om te praten"}
+                {hint ??
+                  (mood === "praat"
+                    ? "Tik om te onderbreken"
+                    : convoOn
+                      ? "Gesprek loopt · tik om te stoppen"
+                      : "Tik op het baken om te praten")}
               </div>
             )}
           </div>
@@ -429,7 +443,10 @@ function BakenExperience({ onClose }: { onClose: () => void }) {
                 <button
                   key={s}
                   type="button"
-                  onClick={() => send(s)}
+                  onClick={() => {
+                    stopConvo();
+                    void send(s);
+                  }}
                   className="shrink-0 rounded-full border border-white/10 bg-white/[0.06] px-3.5 py-2 text-sm text-white/85 backdrop-blur-xl transition-colors hover:bg-white/[0.12]"
                 >
                   {s}
@@ -440,6 +457,7 @@ function BakenExperience({ onClose }: { onClose: () => void }) {
           <form
             onSubmit={(e) => {
               e.preventDefault();
+              stopConvo();
               void send(input);
             }}
             className="flex items-center gap-2 rounded-[26px] border border-white/12 bg-white/[0.07] p-1.5 backdrop-blur-2xl"

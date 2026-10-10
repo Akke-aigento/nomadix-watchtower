@@ -415,11 +415,14 @@ export function sayToday(d: TodayData): BakenReply {
 
 // ---------- taalmodel: maakt van de cijfers een natuurlijk antwoord ----------
 
-let caps: Promise<{ model: string | null; voice: string | null }> | null = null;
-export function capabilities() {
+type Caps = { model: string | null; voice: string | null; listen: string | null };
+let caps: Promise<Caps> | null = null;
+export function capabilities(): Promise<Caps> {
+  const none: Caps = { model: null, voice: null, listen: null };
   caps ??= fetch("/api/baken")
-    .then((r) => (r.ok ? r.json() : { model: null, voice: null }))
-    .catch(() => ({ model: null, voice: null }));
+    .then((r) => (r.ok ? (r.json() as Promise<Partial<Caps>>) : none))
+    .then((c) => ({ ...none, ...c }))
+    .catch(() => none);
   return caps;
 }
 
@@ -552,5 +555,8 @@ export async function ask(
 }
 
 export async function greet(): Promise<BakenReply> {
-  return ask("Geef me in het kort de stand van vandaag.", []);
+  return ask(
+    "Ik open je net. Begroet me kort en natuurlijk (bv. 'Dag Akke'), vat de stand van vandaag samen in één of twee zinnen en vraag waarmee je kan helpen.",
+    [],
+  );
 }
