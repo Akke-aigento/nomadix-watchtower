@@ -21,6 +21,7 @@ import { Route as AuthenticatedMeldingenRouteImport } from './routes/_authentica
 import { Route as AuthenticatedProposalsRouteImport } from './routes/_authenticated/proposals'
 import { Route as AuthenticatedToegangRouteImport } from './routes/_authenticated/toegang'
 import { Route as ApiBakenRouteImport } from './routes/api/baken'
+import { Route as ApiBakenAgentRouteImport } from './routes/api/baken-agent'
 import { Route as ApiBakenSttRouteImport } from './routes/api/baken-stt'
 import { Route as ApiBakenTtsRouteImport } from './routes/api/baken-tts'
 import { Route as AuthenticatedTargetIdRouteImport } from './routes/_authenticated/target.$id'
@@ -93,6 +94,11 @@ const ApiBakenRoute = ApiBakenRouteImport.update({
   path: '/api/baken',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiBakenAgentRoute = ApiBakenAgentRouteImport.update({
+  id: '/api/baken-agent',
+  path: '/api/baken-agent',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiBakenSttRoute = ApiBakenSttRouteImport.update({
   id: '/api/baken-stt',
   path: '/api/baken-stt',
@@ -161,6 +167,7 @@ export interface FileRoutesByFullPath {
   '/proposals': typeof AuthenticatedProposalsRoute
   '/toegang': typeof AuthenticatedToegangRoute
   '/api/baken': typeof ApiBakenRoute
+  '/api/baken-agent': typeof ApiBakenAgentRoute
   '/api/baken-stt': typeof ApiBakenSttRoute
   '/api/baken-tts': typeof ApiBakenTtsRoute
   '/target/$id': typeof AuthenticatedTargetIdRoute
@@ -185,6 +192,7 @@ export interface FileRoutesByTo {
   '/proposals': typeof AuthenticatedProposalsRoute
   '/toegang': typeof AuthenticatedToegangRoute
   '/api/baken': typeof ApiBakenRoute
+  '/api/baken-agent': typeof ApiBakenAgentRoute
   '/api/baken-stt': typeof ApiBakenSttRoute
   '/api/baken-tts': typeof ApiBakenTtsRoute
   '/target/$id': typeof AuthenticatedTargetIdRoute
@@ -211,6 +219,7 @@ export interface FileRoutesById {
   '/_authenticated/proposals': typeof AuthenticatedProposalsRoute
   '/_authenticated/toegang': typeof AuthenticatedToegangRoute
   '/api/baken': typeof ApiBakenRoute
+  '/api/baken-agent': typeof ApiBakenAgentRoute
   '/api/baken-stt': typeof ApiBakenSttRoute
   '/api/baken-tts': typeof ApiBakenTtsRoute
   '/_authenticated/target/$id': typeof AuthenticatedTargetIdRoute
@@ -237,6 +246,7 @@ export interface FileRouteTypes {
     | '/proposals'
     | '/toegang'
     | '/api/baken'
+    | '/api/baken-agent'
     | '/api/baken-stt'
     | '/api/baken-tts'
     | '/target/$id'
@@ -261,6 +271,7 @@ export interface FileRouteTypes {
     | '/proposals'
     | '/toegang'
     | '/api/baken'
+    | '/api/baken-agent'
     | '/api/baken-stt'
     | '/api/baken-tts'
     | '/target/$id'
@@ -286,6 +297,7 @@ export interface FileRouteTypes {
     | '/_authenticated/proposals'
     | '/_authenticated/toegang'
     | '/api/baken'
+    | '/api/baken-agent'
     | '/api/baken-stt'
     | '/api/baken-tts'
     | '/_authenticated/target/$id'
@@ -304,6 +316,7 @@ export interface RootRouteChildren {
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   LoginRoute: typeof LoginRoute
   ApiBakenRoute: typeof ApiBakenRoute
+  ApiBakenAgentRoute: typeof ApiBakenAgentRoute
   ApiBakenSttRoute: typeof ApiBakenSttRoute
   ApiBakenTtsRoute: typeof ApiBakenTtsRoute
   ApiPublicAgendaDoticsRoute: typeof ApiPublicAgendaDoticsRoute
@@ -399,6 +412,13 @@ declare module '@tanstack/react-router' {
       path: '/api/baken'
       fullPath: '/api/baken'
       preLoaderRoute: typeof ApiBakenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/baken-agent': {
+      id: '/api/baken-agent'
+      path: '/api/baken-agent'
+      fullPath: '/api/baken-agent'
+      preLoaderRoute: typeof ApiBakenAgentRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/baken-stt': {
@@ -515,6 +535,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   LoginRoute: LoginRoute,
   ApiBakenRoute: ApiBakenRoute,
+  ApiBakenAgentRoute: ApiBakenAgentRoute,
   ApiBakenSttRoute: ApiBakenSttRoute,
   ApiBakenTtsRoute: ApiBakenTtsRoute,
   ApiPublicAgendaDoticsRoute: ApiPublicAgendaDoticsRoute,

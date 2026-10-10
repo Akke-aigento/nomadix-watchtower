@@ -415,10 +415,15 @@ export function sayToday(d: TodayData): BakenReply {
 
 // ---------- taalmodel: maakt van de cijfers een natuurlijk antwoord ----------
 
-type Caps = { model: string | null; voice: string | null; listen: string | null };
+type Caps = {
+  model: string | null;
+  voice: string | null;
+  listen: string | null;
+  agent: string | null;
+};
 let caps: Promise<Caps> | null = null;
 export function capabilities(): Promise<Caps> {
-  const none: Caps = { model: null, voice: null, listen: null };
+  const none: Caps = { model: null, voice: null, listen: null, agent: null };
   caps ??= fetch("/api/baken")
     .then((r) => (r.ok ? (r.json() as Promise<Partial<Caps>>) : none))
     .then((c) => ({ ...none, ...c }))
@@ -559,4 +564,36 @@ export async function greet(): Promise<BakenReply> {
     "Ik open je net. Begroet me kort en natuurlijk (bv. 'Dag Akke'), vat de stand van vandaag samen in één of twee zinnen en vraag waarmee je kan helpen.",
     [],
   );
+}
+
+// ---------- agent (ElevenLabs): tool + begroeting ----------
+
+/** De client tool "toon": verse cijfers voor de agent + het beeld voor op het scherm. */
+export async function toolToon(
+  onderwerp: string,
+  siteName?: string,
+): Promise<{ scene: Scene | null; facts: unknown }> {
+  const kind = (onderwerp || "").toLowerCase().trim();
+  if (kind === "site" || (siteName && !kind)) {
+    const local = await answerLocally(siteName || onderwerp).catch(() => null);
+    const scene = local?.scenes.find((s) => s.kind === "site") ?? null;
+    if (!scene) return { scene: null, facts: { fout: `Geen site gevonden voor "${siteName}".` } };
+    return { scene, facts: facts([scene])[0] };
+  }
+  const scene = await sceneFor(kind);
+  if (!scene) return { scene: null, facts: { fout: `Onbekend onderwerp "${onderwerp}".` } };
+  return { scene, facts: facts([scene])[0] };
+}
+
+/** Begroeting + stand bij het openen, lokaal berekend (0 credits, geen wachttijd voor het model). */
+export async function agentOpening(): Promise<{ begroeting: string; stand: string; scene: Scene }> {
+  const d = await loadToday();
+  const r = sayToday(d);
+  const h = new Date().getHours();
+  const dag = h < 12 ? "Goeiemorgen" : h < 18 ? "Dag" : "Goeienavond";
+  return {
+    begroeting: `${dag} Akke! ${r.say} Waarmee kan ik je helpen?`,
+    stand: JSON.stringify(facts([{ kind: "vandaag", data: d }])[0]),
+    scene: { kind: "vandaag", data: d },
+  };
 }

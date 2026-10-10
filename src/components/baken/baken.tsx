@@ -8,7 +8,8 @@ import {
   type ReactNode,
 } from "react";
 import { ArrowUp, Mic, MicOff, Volume2, VolumeX, X } from "lucide-react";
-import { ask, greet, type BakenReply } from "./engine";
+import { ask, capabilities, greet, type BakenReply, type Scene } from "./engine";
+import { startAgent, type AgentConversation } from "./agent";
 import { SceneView } from "./scenes";
 import { voice } from "./voice";
 import { ProposalSheet } from "@/components/proposal-detail";
@@ -164,6 +165,12 @@ function BakenExperience({ onClose }: { onClose: () => void }) {
   const [convoOn, setConvoOn] = useState(false);
   const canListen = typeof window !== "undefined" && voice.canListen();
   const sendRef = useRef<(q: string) => void>(() => {});
+  // Agent-modus (ElevenLabs via WebRTC): het gesprek loopt vanzelf, met onderbreken en echte stem.
+  const agent = useRef<AgentConversation | null>(null);
+  const [agentOn, setAgentOn] = useState(false);
+  const pendingScenes = useRef<Scene[]>([]);
+  const capsAgent = useRef(false);
+  const lastTyped = useRef<string | null>(null);
 
   const say = useCallback((text: string) => {
     setTurns((t) => [
@@ -239,22 +246,127 @@ function BakenExperience({ onClose }: { onClose: () => void }) {
     [speak],
   );
 
-  // Begroeting: Baken groet, vat vandaag samen en luistert daarna meteen (gespreksmodus staat aan).
-  useEffect(() => {
-    let alive = true;
+  /** Oude flow (zonder agent): groeten via het taalmodel, dan luisteren. */
+  const greetClassic = useCallback(() => {
     if (canListen) {
       convo.current = true;
       setConvoOn(true);
     }
     greet()
-      .then((r) => alive && push(r))
-      .catch(() => alive && setMood("rust"));
+      .then((r) => push(r))
+      .catch(() => setMood("rust"));
+  }, [canListen, push]);
+
+  const addTurn = useCallback((role: "user" | "baken", text: string) => {
+    const scenes = role === "baken" ? pendingScenes.current.splice(0) : [];
+    setTurns((t) => [
+      ...t,
+      {
+        id: idRef.current++,
+        role,
+        text,
+        reply: role === "baken" ? { say: text, scenes, source: "model" } : undefined,
+      },
+    ]);
+  }, []);
+
+  /** Start het gesprek met de agent; lukt dat niet, dan de oude flow. */
+  const connectAgent = useCallback(
+    async (fallback: boolean) => {
+      setMood("denkt");
+      setHint("Verbinden…");
+      try {
+        const c = await startAgent({
+          status: (st) => {
+            if (st === "verbonden") setHint(null);
+            if (st === "gestopt") {
+              agent.current = null;
+              setAgentOn(false);
+              setMood("rust");
+              setHint("Gesprek gestopt · tik op het baken om verder te praten");
+            }
+          },
+          mode: (m) => setMood(m === "speaking" ? "praat" : "luistert"),
+          message: (role, text) => {
+            if (role === "user" && lastTyped.current === text) {
+              lastTyped.current = null;
+              return;
+            }
+            addTurn(role === "user" ? "user" : "baken", text);
+          },
+          scene: (sc) => {
+            // Komt het beeld na de zin (tool tijdens het spreken), hang het aan het laatste antwoord.
+            pendingScenes.current.push(sc);
+            setTurns((t) => {
+              const lastT = t[t.length - 1];
+              if (!lastT || lastT.role !== "baken" || !lastT.reply) return t;
+              const add = pendingScenes.current.splice(0);
+              return [
+                ...t.slice(0, -1),
+                {
+                  ...lastT,
+                  reply: {
+                    ...lastT.reply,
+                    scenes: [...lastT.reply.scenes.filter((x) => x.kind !== sc.kind), ...add],
+                  },
+                },
+              ];
+            });
+          },
+          error: (m) => console.warn("baken agent", m),
+        });
+        if (!c) throw new Error("geen agent");
+        agent.current = c;
+        setAgentOn(true);
+        if (!soundRef.current) c.setVolume({ volume: 0 });
+      } catch (e) {
+        console.warn("baken agent niet beschikbaar", e);
+        agent.current = null;
+        setAgentOn(false);
+        setHint(null);
+        if (fallback) greetClassic();
+        else {
+          setMood("rust");
+          say("Ik krijg geen verbinding met mijn stem. Tik nog eens of typ je vraag.");
+        }
+      }
+    },
+    [addTurn, greetClassic, say],
+  );
+
+  // Openen: met agent → meteen een echt gesprek (hij groet zelf); anders de oude flow.
+  useEffect(() => {
+    let alive = true;
+    void capabilities().then((c) => {
+      if (!alive) return;
+      capsAgent.current = !!c.agent;
+      if (c.agent) void connectAgent(true);
+      else greetClassic();
+    });
     return () => {
       alive = false;
       voice.stop();
+      void agent.current?.endSession();
+      agent.current = null;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Het baken beweegt mee op de echte stem (agent) of het echte microfoonvolume.
+  useEffect(() => {
+    if (!agentOn) return;
+    let raf = 0;
+    const tick = () => {
+      const c = agent.current;
+      if (c) {
+        const v = mood === "praat" ? c.getOutputVolume() : c.getInputVolume();
+        setLevel(Math.min(1, v * 1.6));
+      }
+      raf = requestAnimationFrame(tick);
+    };
+    tick();
+    return () => cancelAnimationFrame(raf);
+  }, [agentOn, mood]);
 
   useEffect(() => {
     // Eerste antwoord: Baken in beeld houden. Daarna meescrollen met het gesprek.
@@ -267,6 +379,12 @@ function BakenExperience({ onClose }: { onClose: () => void }) {
     if (!text) return;
     setHint(null);
     setInput("");
+    if (agent.current) {
+      lastTyped.current = text;
+      setTurns((t) => [...t, { id: idRef.current++, role: "user", text }]);
+      agent.current.sendUserMessage(text);
+      return;
+    }
     voice.stop();
     const history = turns.map((t) => ({
       role: t.role === "user" ? ("user" as const) : ("assistant" as const),
@@ -293,6 +411,15 @@ function BakenExperience({ onClose }: { onClose: () => void }) {
   const tapTalk = () => {
     voice.unlock();
     setHint(null);
+    if (agent.current) {
+      // Tik tijdens een agent-gesprek = gesprek stoppen.
+      void agent.current.endSession();
+      return;
+    }
+    if (agentOn === false && capsAgent.current) {
+      void connectAgent(false);
+      return;
+    }
     if (listening) {
       stopConvo();
       voice.stop();
@@ -345,6 +472,7 @@ function BakenExperience({ onClose }: { onClose: () => void }) {
           type="button"
           onClick={() => {
             if (sound) voice.stop();
+            agent.current?.setVolume({ volume: sound ? 0 : 1 });
             setSound((s) => !s);
           }}
           className="flex size-10 items-center justify-center rounded-full border border-white/10 bg-white/[0.06] text-white/80"
@@ -380,11 +508,13 @@ function BakenExperience({ onClose }: { onClose: () => void }) {
             {canListen && (
               <div className="mt-0.5 text-[12px] text-white/40">
                 {hint ??
-                  (mood === "praat"
-                    ? "Tik om te onderbreken"
-                    : convoOn
-                      ? "Gesprek loopt · tik om te stoppen"
-                      : "Tik op het baken om te praten")}
+                  (agentOn
+                    ? "Gewoon praten · onderbreken mag · tik om te stoppen"
+                    : mood === "praat"
+                      ? "Tik om te onderbreken"
+                      : convoOn
+                        ? "Gesprek loopt · tik om te stoppen"
+                        : "Tik op het baken om te praten")}
               </div>
             )}
           </div>
