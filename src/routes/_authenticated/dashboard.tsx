@@ -9,6 +9,8 @@ import { IncidentList, isAcknowledged, useIncidents } from "@/components/inciden
 import { CategoryBadge, formatDateTime, relativeTime } from "@/components/watchtower";
 import { cn } from "@/lib/utils";
 import { FINDING_KIND, engineLine, useEngineHealth } from "@/components/findings";
+import { IncidentsWeekly, LatencyGrid } from "@/components/charts";
+import { Coins } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
   head: () => ({
@@ -104,6 +106,19 @@ function DashboardPage() {
       return data ?? [];
     },
     refetchInterval: 120_000,
+  });
+  const creditsQuery = useQuery({
+    queryKey: ["credit_latest", "teaser"],
+    queryFn: async () => {
+      const [{ data: rows }, { count }] = await Promise.all([
+        supabase.from("credit_latest").select("project_name, exec_s_per_day"),
+        supabase.from("proposals").select("id", { count: "exact", head: true }).like("bundle", "credits-%").eq("status", "proposed"),
+      ]);
+      const list = (rows ?? []).filter((r) => r.exec_s_per_day != null);
+      const total = list.reduce((s, r) => s + Number(r.exec_s_per_day), 0);
+      const top = [...list].sort((a, b) => Number(b.exec_s_per_day) - Number(a.exec_s_per_day))[0];
+      return { total, top, open: count ?? 0 };
+    },
   });
   const engine = useEngineHealth();
   const eng = engineLine(engine.data);
@@ -262,6 +277,27 @@ function DashboardPage() {
             </div>
           </section>
         )}
+
+        {creditsQuery.data?.top && (
+          <Link to="/kosten" className="panel flex items-center gap-4 p-5 transition-colors hover:border-primary/40">
+            <span className="brand-gradient flex size-11 shrink-0 items-center justify-center rounded-2xl">
+              <Coins className="size-5 text-[#06202c]" />
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block font-semibold">
+                {creditsQuery.data.open ? `${creditsQuery.data.open} manieren om credits te besparen` : "Credits onder controle"}
+              </span>
+              <span className="block truncate text-sm text-muted-foreground">
+                {creditsQuery.data.top.project_name} neemt{" "}
+                {Math.round((Number(creditsQuery.data.top.exec_s_per_day) / (creditsQuery.data.total || 1)) * 100)}% van de rekentijd
+              </span>
+            </span>
+          </Link>
+        )}
+
+        <LatencyGrid targets={targets.filter((t) => t.kind === "platform" || t.kind === "storefront")} />
+
+        <IncidentsWeekly />
 
         <section className="space-y-6">
           {GROUPS.map((g) => {

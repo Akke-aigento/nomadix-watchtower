@@ -16,8 +16,10 @@ import { Route as AuthenticatedAgendaRouteImport } from './routes/_authenticated
 import { Route as AuthenticatedAlertsRouteImport } from './routes/_authenticated/alerts'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedKoppelingenRouteImport } from './routes/_authenticated/koppelingen'
+import { Route as AuthenticatedKostenRouteImport } from './routes/_authenticated/kosten'
 import { Route as AuthenticatedMeldingenRouteImport } from './routes/_authenticated/meldingen'
 import { Route as AuthenticatedProposalsRouteImport } from './routes/_authenticated/proposals'
+import { Route as AuthenticatedToegangRouteImport } from './routes/_authenticated/toegang'
 import { Route as AuthenticatedTargetIdRouteImport } from './routes/_authenticated/target.$id'
 import { Route as AuthenticatedTargetsNewRouteImport } from './routes/_authenticated/targets/new'
 import { Route as ApiPublicAgendaDoticsRouteImport } from './routes/api/public/agenda[.]ics'
@@ -63,6 +65,11 @@ const AuthenticatedKoppelingenRoute =
     path: '/koppelingen',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedKostenRoute = AuthenticatedKostenRouteImport.update({
+  id: '/kosten',
+  path: '/kosten',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedMeldingenRoute = AuthenticatedMeldingenRouteImport.update({
   id: '/meldingen',
   path: '/meldingen',
@@ -71,6 +78,11 @@ const AuthenticatedMeldingenRoute = AuthenticatedMeldingenRouteImport.update({
 const AuthenticatedProposalsRoute = AuthenticatedProposalsRouteImport.update({
   id: '/proposals',
   path: '/proposals',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedToegangRoute = AuthenticatedToegangRouteImport.update({
+  id: '/toegang',
+  path: '/toegang',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedTargetIdRoute = AuthenticatedTargetIdRouteImport.update({
@@ -126,8 +138,10 @@ export interface FileRoutesByFullPath {
   '/alerts': typeof AuthenticatedAlertsRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/koppelingen': typeof AuthenticatedKoppelingenRoute
+  '/kosten': typeof AuthenticatedKostenRoute
   '/meldingen': typeof AuthenticatedMeldingenRoute
   '/proposals': typeof AuthenticatedProposalsRoute
+  '/toegang': typeof AuthenticatedToegangRoute
   '/target/$id': typeof AuthenticatedTargetIdRoute
   '/targets/new': typeof AuthenticatedTargetsNewRoute
   '/api/public/agenda.ics': typeof ApiPublicAgendaDoticsRoute
@@ -145,8 +159,10 @@ export interface FileRoutesByTo {
   '/alerts': typeof AuthenticatedAlertsRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/koppelingen': typeof AuthenticatedKoppelingenRoute
+  '/kosten': typeof AuthenticatedKostenRoute
   '/meldingen': typeof AuthenticatedMeldingenRoute
   '/proposals': typeof AuthenticatedProposalsRoute
+  '/toegang': typeof AuthenticatedToegangRoute
   '/target/$id': typeof AuthenticatedTargetIdRoute
   '/targets/new': typeof AuthenticatedTargetsNewRoute
   '/api/public/agenda.ics': typeof ApiPublicAgendaDoticsRoute
@@ -166,8 +182,10 @@ export interface FileRoutesById {
   '/_authenticated/alerts': typeof AuthenticatedAlertsRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/koppelingen': typeof AuthenticatedKoppelingenRoute
+  '/_authenticated/kosten': typeof AuthenticatedKostenRoute
   '/_authenticated/meldingen': typeof AuthenticatedMeldingenRoute
   '/_authenticated/proposals': typeof AuthenticatedProposalsRoute
+  '/_authenticated/toegang': typeof AuthenticatedToegangRoute
   '/_authenticated/target/$id': typeof AuthenticatedTargetIdRoute
   '/_authenticated/targets/new': typeof AuthenticatedTargetsNewRoute
   '/api/public/agenda.ics': typeof ApiPublicAgendaDoticsRoute
@@ -187,8 +205,10 @@ export interface FileRouteTypes {
     | '/alerts'
     | '/dashboard'
     | '/koppelingen'
+    | '/kosten'
     | '/meldingen'
     | '/proposals'
+    | '/toegang'
     | '/target/$id'
     | '/targets/new'
     | '/api/public/agenda.ics'
@@ -206,8 +226,10 @@ export interface FileRouteTypes {
     | '/alerts'
     | '/dashboard'
     | '/koppelingen'
+    | '/kosten'
     | '/meldingen'
     | '/proposals'
+    | '/toegang'
     | '/target/$id'
     | '/targets/new'
     | '/api/public/agenda.ics'
@@ -226,8 +248,10 @@ export interface FileRouteTypes {
     | '/_authenticated/alerts'
     | '/_authenticated/dashboard'
     | '/_authenticated/koppelingen'
+    | '/_authenticated/kosten'
     | '/_authenticated/meldingen'
     | '/_authenticated/proposals'
+    | '/_authenticated/toegang'
     | '/_authenticated/target/$id'
     | '/_authenticated/targets/new'
     | '/api/public/agenda.ics'
@@ -303,6 +327,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedKoppelingenRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/kosten': {
+      id: '/_authenticated/kosten'
+      path: '/kosten'
+      fullPath: '/kosten'
+      preLoaderRoute: typeof AuthenticatedKostenRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/meldingen': {
       id: '/_authenticated/meldingen'
       path: '/meldingen'
@@ -315,6 +346,13 @@ declare module '@tanstack/react-router' {
       path: '/proposals'
       fullPath: '/proposals'
       preLoaderRoute: typeof AuthenticatedProposalsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/toegang': {
+      id: '/_authenticated/toegang'
+      path: '/toegang'
+      fullPath: '/toegang'
+      preLoaderRoute: typeof AuthenticatedToegangRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/target/$id': {
@@ -388,8 +426,10 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedAlertsRoute: typeof AuthenticatedAlertsRoute
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedKoppelingenRoute: typeof AuthenticatedKoppelingenRoute
+  AuthenticatedKostenRoute: typeof AuthenticatedKostenRoute
   AuthenticatedMeldingenRoute: typeof AuthenticatedMeldingenRoute
   AuthenticatedProposalsRoute: typeof AuthenticatedProposalsRoute
+  AuthenticatedToegangRoute: typeof AuthenticatedToegangRoute
   AuthenticatedTargetIdRoute: typeof AuthenticatedTargetIdRoute
   AuthenticatedTargetsNewRoute: typeof AuthenticatedTargetsNewRoute
 }
@@ -399,8 +439,10 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAlertsRoute: AuthenticatedAlertsRoute,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedKoppelingenRoute: AuthenticatedKoppelingenRoute,
+  AuthenticatedKostenRoute: AuthenticatedKostenRoute,
   AuthenticatedMeldingenRoute: AuthenticatedMeldingenRoute,
   AuthenticatedProposalsRoute: AuthenticatedProposalsRoute,
+  AuthenticatedToegangRoute: AuthenticatedToegangRoute,
   AuthenticatedTargetIdRoute: AuthenticatedTargetIdRoute,
   AuthenticatedTargetsNewRoute: AuthenticatedTargetsNewRoute,
 }

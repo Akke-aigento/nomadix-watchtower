@@ -4,8 +4,40 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* Akke-familie: Manrope (tekst) + JetBrains Mono (cijfers/labels), self-hosted (OFL). */
+@font-face {
+  font-family: "Manrope";
+  font-style: normal;
+  font-weight: 200 800;
+  font-display: swap;
+  src: url("/fonts/manrope-latin-wght-normal.woff2") format("woff2-variations");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: "Manrope";
+  font-style: normal;
+  font-weight: 200 800;
+  font-display: swap;
+  src: url("/fonts/manrope-latin-ext-wght-normal.woff2") format("woff2-variations");
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: "JetBrains Mono";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/fonts/jetbrains-mono-latin-400-normal.woff2") format("woff2");
+}
+@font-face {
+  font-family: "JetBrains Mono";
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("/fonts/jetbrains-mono-latin-500-normal.woff2") format("woff2");
+}
+
 /*
- * Nomadix Watchtower design system — dark-only monitoring console.
+ * Nomadix Watchtower design system — Akke-familie (zie docs/brand), dark-only.
  * All colors are oklch semantic tokens. Never hardcode colors in components.
  */
 
@@ -53,50 +85,60 @@
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
+  --font-sans: "Manrope", ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --color-brand-1: #14b8a6;
+  --color-brand-2: #06b6d4;
+  --color-brand-3: #0ea5e9;
+  --color-series-1: var(--series-1);
+  --color-series-2: var(--series-2);
+  --color-series-3: var(--series-3);
   --font-mono:
     "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
   --shadow-panel: 0 1px 0 0 oklch(1 0 0 / 6%) inset, 0 18px 40px -24px oklch(0 0 0 / 80%);
-  --shadow-glow: 0 0 0 1px oklch(0.72 0.14 178 / 25%), 0 0 32px -8px oklch(0.72 0.14 178 / 40%);
+  --shadow-glow: 0 0 0 1px rgb(34 195 221 / 25%), 0 0 32px -8px rgb(34 195 221 / 35%);
 }
 
 :root,
 .dark {
-  --radius: 0.5rem;
-  --background: oklch(0.17 0.02 250);
-  --foreground: oklch(0.94 0.01 240);
-  --card: oklch(0.21 0.021 252);
-  --card-foreground: oklch(0.94 0.01 240);
-  --popover: oklch(0.21 0.021 252);
-  --popover-foreground: oklch(0.94 0.01 240);
-  --primary: oklch(0.75 0.13 179);
-  --primary-foreground: oklch(0.18 0.03 200);
-  --secondary: oklch(0.27 0.022 253);
-  --secondary-foreground: oklch(0.92 0.01 240);
-  --muted: oklch(0.25 0.02 253);
-  --muted-foreground: oklch(0.68 0.02 250);
-  --accent: oklch(0.3 0.035 255);
-  --accent-foreground: oklch(0.95 0.01 240);
+  --radius: 0.875rem;
+  --background: #0b1a2e;
+  --foreground: #e8eef6;
+  --card: #13253d;
+  --card-foreground: #e8eef6;
+  --popover: #152a45;
+  --popover-foreground: #e8eef6;
+  --primary: #22c3dd;
+  --primary-foreground: #06202c;
+  --secondary: #1b3150;
+  --secondary-foreground: #e2e9f2;
+  --muted: #182c47;
+  --muted-foreground: #93a4ba;
+  --accent: #1d3657;
+  --accent-foreground: #f0f5fa;
   --destructive: oklch(0.62 0.21 22);
-  --destructive-foreground: oklch(0.97 0.01 240);
-  --border: oklch(0.31 0.022 253);
-  --input: oklch(0.29 0.022 253);
-  --ring: oklch(0.75 0.13 179);
+  --destructive-foreground: #fff;
+  --border: #22395a;
+  --input: #22395a;
+  --ring: #22c3dd;
   --ok: oklch(0.75 0.16 155);
   --warn: oklch(0.8 0.16 82);
   --crit: oklch(0.65 0.21 20);
-  --chart-1: oklch(0.75 0.13 179);
-  --chart-2: oklch(0.75 0.16 155);
-  --chart-3: oklch(0.8 0.16 82);
-  --chart-4: oklch(0.65 0.21 20);
-  --chart-5: oklch(0.65 0.14 275);
-  --sidebar: oklch(0.19 0.02 252);
-  --sidebar-foreground: oklch(0.88 0.01 240);
-  --sidebar-primary: oklch(0.75 0.13 179);
-  --sidebar-primary-foreground: oklch(0.18 0.03 200);
-  --sidebar-accent: oklch(0.26 0.022 253);
-  --sidebar-accent-foreground: oklch(0.95 0.01 240);
-  --sidebar-border: oklch(0.28 0.022 253);
-  --sidebar-ring: oklch(0.75 0.13 179);
+  --series-1: #3987e5;
+  --series-2: #d55181;
+  --series-3: #9085e9;
+  --chart-1: #22c3dd;
+  --chart-2: var(--ok);
+  --chart-3: var(--warn);
+  --chart-4: var(--crit);
+  --chart-5: #9085e9;
+  --sidebar: #0a1728;
+  --sidebar-foreground: #dbe4ef;
+  --sidebar-primary: #22c3dd;
+  --sidebar-primary-foreground: #06202c;
+  --sidebar-accent: #15283f;
+  --sidebar-accent-foreground: #f0f5fa;
+  --sidebar-border: #1b3150;
+  --sidebar-ring: #22c3dd;
 }
 
 @layer base {
@@ -107,7 +149,9 @@
   body {
     background-color: var(--color-background);
     color: var(--color-foreground);
-    font-feature-settings: "cv11", "ss01";
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    -webkit-tap-highlight-color: transparent;
   }
 }
 
@@ -116,6 +160,21 @@
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-panel);
+}
+
+@utility tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+@utility brand-gradient {
+  background-image: linear-gradient(135deg, #14b8a6 0%, #06b6d4 50%, #0ea5e9 100%);
+}
+
+@utility brand-text {
+  background-image: linear-gradient(135deg, #2dd4bf 0%, #22d3ee 50%, #38bdf8 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
 }
 
 @utility text-tech {

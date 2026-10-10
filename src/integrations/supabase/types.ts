@@ -135,6 +135,57 @@ export type Database = {
           },
         ]
       }
+      credit_snapshots: {
+        Row: {
+          id: string
+          lovable_project_id: string
+          project_name: string
+          taken_at: string
+          exec_s_per_day: number | null
+          stats_since: string | null
+          db_size_mb: number | null
+          pg_net_backlog: number | null
+          crons: Json
+          top_queries: Json
+          realtime_tables: string[]
+          drivers: string[]
+          savings: Json
+          source: string
+        }
+        Insert: {
+          id?: string
+          lovable_project_id: string
+          project_name: string
+          taken_at?: string
+          exec_s_per_day?: number | null
+          stats_since?: string | null
+          db_size_mb?: number | null
+          pg_net_backlog?: number | null
+          crons?: Json
+          top_queries?: Json
+          realtime_tables?: string[]
+          drivers?: string[]
+          savings?: Json
+          source?: string
+        }
+        Update: {
+          id?: string
+          lovable_project_id?: string
+          project_name?: string
+          taken_at?: string
+          exec_s_per_day?: number | null
+          stats_since?: string | null
+          db_size_mb?: number | null
+          pg_net_backlog?: number | null
+          crons?: Json
+          top_queries?: Json
+          realtime_tables?: string[]
+          drivers?: string[]
+          savings?: Json
+          source?: string
+        }
+        Relationships: []
+      }
       findings: {
         Row: {
           id: string
@@ -620,8 +671,57 @@ export type Database = {
         }
         Relationships: []
       }
+      web_access: {
+        Row: {
+          domain: string
+          reason: string
+          integration_key: string | null
+          status: string
+          requested_at: string
+          decided_at: string | null
+          synced_at: string | null
+        }
+        Insert: {
+          domain: string
+          reason: string
+          integration_key?: string | null
+          status?: string
+          requested_at?: string
+          decided_at?: string | null
+          synced_at?: string | null
+        }
+        Update: {
+          domain?: string
+          reason?: string
+          integration_key?: string | null
+          status?: string
+          requested_at?: string
+          decided_at?: string | null
+          synced_at?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
+      credit_latest: {
+        Row: {
+          id: string
+          lovable_project_id: string
+          project_name: string
+          taken_at: string
+          exec_s_per_day: number | null
+          stats_since: string | null
+          db_size_mb: number | null
+          pg_net_backlog: number | null
+          crons: Json
+          top_queries: Json
+          realtime_tables: string[]
+          drivers: string[]
+          savings: Json
+          source: string
+        }
+        Relationships: []
+      }
       agenda: {
         Row: {
           id: string
@@ -661,6 +761,14 @@ export type Database = {
       is_watchtower_admin: { Args: never; Returns: boolean }
       wt_ingest_scan: { Args: { scan: Json }; Returns: Json }
       wt_engine_health: { Args: never; Returns: Json }
+      wt_latency_hourly: {
+        Args: { p_days?: number }
+        Returns: { target_id: string; hour: string; p50_ms: number; checks: number; fails: number }[]
+      }
+      wt_incidents_weekly: {
+        Args: { p_weeks?: number }
+        Returns: { week: string; grp: string; n: number }[]
+      }
       wt_daily_check_status: {
         Args: { p_target: string; p_days?: number }
         Returns: {

@@ -1,0 +1,37 @@
+{
+  "permissions": {
+    "allow": [
+      "WebFetch(domain:ai.google.dev)",
+      "WebFetch(domain:api.bol.com)",
+      "WebFetch(domain:developer.apple.com)",
+      "WebFetch(domain:developers.bol.com)",
+      "WebFetch(domain:developers.cloudflare.com)",
+      "WebFetch(domain:developers.facebook.com)",
+      "WebFetch(domain:developers.printful.com)",
+      "WebFetch(domain:docs.claude.com)",
+      "WebFetch(domain:docs.lovable.dev)",
+      "WebFetch(domain:docs.peppol.eu)",
+      "WebFetch(domain:docs.stripe.com)",
+      "WebFetch(domain:ec.europa.eu)",
+      "WebFetch(domain:financien.belgium.be)",
+      "WebFetch(domain:github.blog)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:lovable.dev)",
+      "WebFetch(domain:migadu.com)",
+      "WebFetch(domain:partnerplatform.bol.com)",
+      "WebFetch(domain:platform.claude.com)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "WebFetch(domain:resend.com)",
+      "WebFetch(domain:shopify.dev)",
+      "WebFetch(domain:status.claude.com)",
+      "WebFetch(domain:stripe.com)",
+      "WebFetch(domain:supabase.com)",
+      "WebFetch(domain:support.stripe.com)",
+      "WebFetch(domain:webkit.org)",
+      "WebFetch(domain:www.anthropic.com)",
+      "WebFetch(domain:www.cloudflarestatus.com)",
+      "WebFetch(domain:www.odoo.com)",
+      "WebFetch(domain:www.printful.com)"
+    ]
+  }
+}
