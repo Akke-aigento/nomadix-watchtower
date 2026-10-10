@@ -400,8 +400,12 @@ export async function checkStore(tenantId: string, fetcher: Fetcher = fetch): Pr
         },
       };
     }
-    const list = ((products.data as { products?: Array<{ price?: number | null }> })?.products ?? []) as Array<{ price?: number | null }>;
-    const withPrice = list.filter((p) => typeof p.price === "number" && p.price > 0).length;
+    type P = { price?: number | null; price_range?: { min?: number | null } | null };
+    const list = ((products.data as { products?: P[] })?.products ?? []) as P[];
+    // Producten met varianten hebben price 0 en de echte prijs in price_range (bv. Astra Sleep).
+    const withPrice = list.filter(
+      (p) => (typeof p.price === "number" && p.price > 0) || (typeof p.price_range?.min === "number" && p.price_range.min > 0),
+    ).length;
     const methods = Array.isArray(shipping.data) ? shipping.data.length : 0;
     let status: CheckStatus = "ok";
     let issue: string | null = null;
