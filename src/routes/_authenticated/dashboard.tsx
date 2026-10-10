@@ -12,6 +12,7 @@ import { FINDING_KIND, engineLine, useEngineHealth } from "@/components/findings
 import { IncidentsWeekly, LatencyGrid } from "@/components/charts";
 import { ProposalRow, ProposalSheet } from "@/components/proposal-detail";
 import { RadarOrb } from "@/components/radar-orb";
+import { useBaken } from "@/components/baken/baken";
 import { VisitorsOverview } from "@/components/site-analytics";
 import { Coins } from "lucide-react";
 
@@ -196,7 +197,7 @@ function DashboardPage() {
           }}
         >
           <div className="flex flex-col items-start gap-6 sm:flex-row sm:items-center">
-            <RadarOrb level={level} className="w-32 shrink-0 md:w-40" />
+            <BakenHeroButton level={level} />
             <div className="min-w-0 flex-1">
               <div className="mb-2 flex flex-wrap items-center gap-2 text-xs font-semibold uppercase tracking-[0.12em]">
                 <span style={{ color: LEVEL_COLOR[level] }}>
@@ -482,5 +483,26 @@ function DashboardPage() {
       </div>
       <ProposalSheet id={openProposal} onOpenChange={setOpenProposal} />
     </AppShell>
+  );
+}
+
+/** Het oog op Vandaag is meteen de knop naar Baken. */
+function BakenHeroButton({ level }: { level: "rustig" | "aandacht" | "actie" }) {
+  const { open } = useBaken();
+  return (
+    <button
+      type="button"
+      onClick={open}
+      className="group relative w-32 shrink-0 md:w-40"
+      aria-label="Praat met Baken"
+    >
+      <RadarOrb
+        level={level}
+        className="w-full transition-transform duration-300 group-hover:scale-105 group-active:scale-95"
+      />
+      <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 rounded-full border border-white/10 bg-[#0b1a2e]/85 px-2.5 py-0.5 text-[11px] font-bold whitespace-nowrap text-[#22d3ee] backdrop-blur">
+        Praat met Baken
+      </span>
+    </button>
   );
 }
