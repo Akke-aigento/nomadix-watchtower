@@ -381,6 +381,9 @@ export type Database = {
       }
       proposals: {
         Row: {
+          bundle: string | null
+          bundle_title: string | null
+          bundle_order: number | null
           executed_at: string | null
           fingerprint: string | null
           incident_id: string | null
@@ -397,6 +400,9 @@ export type Database = {
           title: string
         }
         Insert: {
+          bundle?: string | null
+          bundle_title?: string | null
+          bundle_order?: number | null
           executed_at?: string | null
           fingerprint?: string | null
           incident_id?: string | null
@@ -413,6 +419,9 @@ export type Database = {
           title: string
         }
         Update: {
+          bundle?: string | null
+          bundle_title?: string | null
+          bundle_order?: number | null
           executed_at?: string | null
           fingerprint?: string | null
           incident_id?: string | null

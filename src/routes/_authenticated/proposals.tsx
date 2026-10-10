@@ -77,6 +77,31 @@ function ProposalsPage() {
   });
 
   const rows = (proposalsQuery.data ?? []).filter((p) => filter === "all" || p.status === filter);
+  // Pakketten (bundle) bij elkaar, in volgorde; losse voorstellen daarna.
+  const bundles = [...new Set(rows.filter((p) => p.bundle).map((p) => p.bundle as string))];
+  const loose = rows.filter((p) => !p.bundle);
+  const ordered = [
+    ...bundles.flatMap((b) =>
+      rows.filter((p) => p.bundle === b).sort((a, b2) => (a.bundle_order ?? 99) - (b2.bundle_order ?? 99)),
+    ),
+    ...loose,
+  ];
+  const bundleTitle = (b: string) => rows.find((x) => x.bundle === b && x.bundle_title)?.bundle_title ?? `Pakket: ${b}`;
+  const approveBundle = useMutation({
+    mutationFn: async (bundle: string) => {
+      const { error } = await supabase
+        .from("proposals")
+        .update({ status: "approved", decided_at: new Date().toISOString() })
+        .eq("bundle", bundle)
+        .eq("status", "proposed");
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["proposals"] });
+      toast.success("Go voor het hele pakket");
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
 
   return (
     <AppShell>
@@ -91,7 +116,9 @@ function ProposalsPage() {
               <SelectContent>
                 <SelectItem value="all">Alle statussen</SelectItem>
                 <SelectItem value="proposed">Wacht op go</SelectItem>
-                <SelectItem value="approved">Goedgekeurd</SelectItem>
+                <SelectItem value="approved">Go gegeven</SelectItem>
+                <SelectItem value="in_progress">Bezig</SelectItem>
+                <SelectItem value="failed">Mislukt / jouw beurt</SelectItem>
                 <SelectItem value="rejected">Afgewezen</SelectItem>
                 <SelectItem value="done">Uitgevoerd</SelectItem>
               </SelectContent>
@@ -105,13 +132,32 @@ function ProposalsPage() {
           <p className="text-sm text-muted-foreground">Geen voorstellen.</p>
         ) : (
           <div className="space-y-3">
-            {rows.map((p, i) => (
+            {ordered.map((p, i) => (
+              <div key={p.id} className="space-y-3">
+              {p.bundle && p.bundle !== ordered[i - 1]?.bundle && (
+                <div className="flex flex-wrap items-center gap-3 pt-3">
+                  <h2 className="font-semibold">{bundleTitle(p.bundle)}</h2>
+                  <span className="text-xs text-muted-foreground">
+                    {rows.filter((x) => x.bundle === p.bundle).length} samenhangende stappen
+                  </span>
+                  {rows.some((x) => x.bundle === p.bundle && x.status === "proposed") && (
+                    <Button size="sm" variant="outline" className="ml-auto" disabled={approveBundle.isPending} onClick={() => approveBundle.mutate(p.bundle!)}>
+                      Go voor heel het pakket
+                    </Button>
+                  )}
+                </div>
+              )}
               <article
                 key={p.id}
                 className="fade-in-card panel p-4"
                 style={{ animationDelay: `${i * 25}ms` }}
               >
                 <div className="flex flex-wrap items-center gap-2">
+                  {p.bundle_order != null && (
+                    <span className="text-tech rounded border border-border px-1.5 py-0.5 text-[10px] text-muted-foreground">
+                      stap {p.bundle_order}
+                    </span>
+                  )}
                   <CategoryBadge category={p.category} />
                   <span className="text-tech rounded border border-border px-1.5 py-0.5 text-[10px] text-muted-foreground">
                     {PROPOSAL_STATUS_LABEL[p.status] ?? p.status}
@@ -171,6 +217,7 @@ function ProposalsPage() {
                   </div>
                 )}
               </article>
+              </div>
             ))}
           </div>
         )}
