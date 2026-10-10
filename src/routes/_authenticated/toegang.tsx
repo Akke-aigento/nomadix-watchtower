@@ -17,14 +17,23 @@ function ToegangPage() {
   const list = useQuery({
     queryKey: ["web_access"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("web_access").select("*").order("requested_at", { ascending: false });
+      const { data, error } = await supabase
+        .from("web_access")
+        .select("*")
+        .order("requested_at", { ascending: false });
       if (error) throw error;
       return data ?? [];
     },
   });
 
   const decide = useMutation({
-    mutationFn: async ({ domain, status }: { domain: string; status: "toegestaan" | "geweigerd" }) => {
+    mutationFn: async ({
+      domain,
+      status,
+    }: {
+      domain: string;
+      status: "toegestaan" | "geweigerd";
+    }) => {
       const { error } = await supabase
         .from("web_access")
         .update({ status, decided_at: new Date().toISOString(), synced_at: null })
@@ -34,7 +43,11 @@ function ToegangPage() {
     onSuccess: (_d, v) => {
       queryClient.invalidateQueries({ queryKey: ["web_access"] });
       queryClient.invalidateQueries({ queryKey: ["nav_badges"] });
-      toast.success(v.status === "toegestaan" ? `${v.domain} toegestaan — actief vanaf de volgende ronde` : `${v.domain} geweigerd`);
+      toast.success(
+        v.status === "toegestaan"
+          ? `${v.domain} toegestaan — actief vanaf de volgende ronde`
+          : `${v.domain} geweigerd`,
+      );
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -55,16 +68,28 @@ function ToegangPage() {
       </div>
       {actions ? (
         <div className="flex shrink-0 gap-1.5">
-          <Button size="sm" disabled={decide.isPending} onClick={() => decide.mutate({ domain: r.domain, status: "toegestaan" })}>
+          <Button
+            size="sm"
+            disabled={decide.isPending}
+            onClick={() => decide.mutate({ domain: r.domain, status: "toegestaan" })}
+          >
             <Check className="size-4" /> Toestaan
           </Button>
-          <Button size="sm" variant="ghost" aria-label="Weigeren" disabled={decide.isPending} onClick={() => decide.mutate({ domain: r.domain, status: "geweigerd" })}>
+          <Button
+            size="sm"
+            variant="ghost"
+            aria-label="Weigeren"
+            disabled={decide.isPending}
+            onClick={() => decide.mutate({ domain: r.domain, status: "geweigerd" })}
+          >
             <X className="size-4" />
           </Button>
         </div>
       ) : (
         <div className="shrink-0 text-right text-xs">
-          <div style={{ color: r.status === "toegestaan" ? "var(--ok)" : "var(--crit)" }}>{r.status}</div>
+          <div style={{ color: r.status === "toegestaan" ? "var(--ok)" : "var(--crit)" }}>
+            {r.status}
+          </div>
           <div className="text-muted-foreground">{r.synced_at ? "actief" : "volgende ronde"}</div>
         </div>
       )}
@@ -81,18 +106,29 @@ function ToegangPage() {
         />
 
         <section className="space-y-2">
-          <h2 className="text-xs font-semibold uppercase tracking-[0.1em] text-muted-foreground">Gevraagd ({asked.length})</h2>
+          <h2 className="text-xs font-semibold uppercase tracking-[0.1em] text-muted-foreground">
+            Gevraagd ({asked.length})
+          </h2>
           {asked.length ? (
             <div className="panel divide-y divide-border">{asked.map((r) => row(r, true))}</div>
           ) : (
-            <div className="panel px-4 py-5 text-sm text-muted-foreground">Niets te beslissen. Nieuwe aanvragen verschijnen hier met een melding.</div>
+            <div className="panel px-4 py-5 text-sm text-muted-foreground">
+              Niets te beslissen. Nieuwe aanvragen verschijnen hier met een melding.
+            </div>
           )}
         </section>
 
         {done.length > 0 && (
           <section className="space-y-2">
             <h2 className="text-xs font-semibold uppercase tracking-[0.1em] text-muted-foreground">
-              Beslist ({done.length}) · laatst {relativeTime(done.map((d) => d.decided_at).filter(Boolean).sort().at(-1) as string | undefined)}
+              Beslist ({done.length}) · laatst{" "}
+              {relativeTime(
+                done
+                  .map((d) => d.decided_at)
+                  .filter(Boolean)
+                  .sort()
+                  .at(-1) as string | undefined,
+              )}
             </h2>
             <div className="panel divide-y divide-border">{done.map((r) => row(r, false))}</div>
           </section>

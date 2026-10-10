@@ -10,13 +10,17 @@ import { CategoryBadge, formatDateTime, relativeTime } from "@/components/watcht
 import { cn } from "@/lib/utils";
 import { FINDING_KIND, engineLine, useEngineHealth } from "@/components/findings";
 import { IncidentsWeekly, LatencyGrid } from "@/components/charts";
+import { ProposalRow, ProposalSheet } from "@/components/proposal-detail";
 import { Coins } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
   head: () => ({
     meta: [
       { title: "Overzicht — Nomadix Watchtower" },
-      { name: "description", content: "Moet ik vandaag iets doen? Alle Nomadix-properties in één oogopslag." },
+      {
+        name: "description",
+        content: "Moet ik vandaag iets doen? Alle Nomadix-properties in één oogopslag.",
+      },
     ],
   }),
   component: DashboardPage,
@@ -41,11 +45,16 @@ const LEVEL_COLOR: Record<string, string> = {
 function DashboardPage() {
   const queryClient = useQueryClient();
   const [showAll, setShowAll] = useState(false);
+  const [openProposal, setOpenProposal] = useState<string | null>(null);
 
   const targetsQuery = useQuery({
     queryKey: ["watch_targets"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("watch_targets").select("*").eq("enabled", true).order("name");
+      const { data, error } = await supabase
+        .from("watch_targets")
+        .select("*")
+        .eq("enabled", true)
+        .order("name");
       if (error) throw error;
       return data;
     },
@@ -75,7 +84,11 @@ function DashboardPage() {
     },
     onSuccess: (_d, vars) => {
       queryClient.invalidateQueries({ queryKey: ["proposals"] });
-      toast.success(vars.status === "approved" ? "Go gegeven — Claude pakt dit op bij de volgende ronde (rond 8u, 13u of 19u)" : "Afgewezen");
+      toast.success(
+        vars.status === "approved"
+          ? "Go gegeven — Claude pakt dit op bij de volgende ronde (rond 8u, 13u of 19u)"
+          : "Afgewezen",
+      );
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -89,7 +102,9 @@ function DashboardPage() {
         .eq("usage_state", "active")
         .in("upstream_indicator", ["minor", "major", "critical"]);
       const seen = new Set<string>();
-      return (data ?? []).filter((r) => (seen.has(r.partner) ? false : (seen.add(r.partner), true)));
+      return (data ?? []).filter((r) =>
+        seen.has(r.partner) ? false : (seen.add(r.partner), true),
+      );
     },
     refetchInterval: 120_000,
   });
@@ -112,7 +127,11 @@ function DashboardPage() {
     queryFn: async () => {
       const [{ data: rows }, { count }] = await Promise.all([
         supabase.from("credit_latest").select("project_name, exec_s_per_day"),
-        supabase.from("proposals").select("id", { count: "exact", head: true }).like("bundle", "credits-%").eq("status", "proposed"),
+        supabase
+          .from("proposals")
+          .select("id", { count: "exact", head: true })
+          .like("bundle", "credits-%")
+          .eq("status", "proposed"),
       ]);
       const list = (rows ?? []).filter((r) => r.exec_s_per_day != null);
       const total = list.reduce((s, r) => s + Number(r.exec_s_per_day), 0);
@@ -168,8 +187,14 @@ function DashboardPage() {
       <div className="mx-auto max-w-5xl space-y-8">
         <header className="pt-2">
           <div className="mb-3 flex items-center gap-2">
-            <span className="inline-block size-2.5 rounded-full" style={{ background: LEVEL_COLOR[level] }} />
-            <span className="text-xs font-semibold uppercase tracking-[0.08em]" style={{ color: LEVEL_COLOR[level] }}>
+            <span
+              className="inline-block size-2.5 rounded-full"
+              style={{ background: LEVEL_COLOR[level] }}
+            />
+            <span
+              className="text-xs font-semibold uppercase tracking-[0.08em]"
+              style={{ color: LEVEL_COLOR[level] }}
+            >
               {level === "actie" ? "Actie" : level === "aandacht" ? "Aandacht" : "Rustig"}
             </span>
             <span className="text-tech ml-auto text-[11px] text-muted-foreground">
@@ -193,7 +218,9 @@ function DashboardPage() {
               >
                 <div className="mb-1 flex items-center justify-between gap-3">
                   <span className="font-semibold">{i.watch_targets?.name}</span>
-                  <span className="text-tech text-xs text-[var(--crit)]">sinds {formatDateTime(i.opened_at)}</span>
+                  <span className="text-tech text-xs text-[var(--crit)]">
+                    sinds {formatDateTime(i.opened_at)}
+                  </span>
                 </div>
                 <p className="text-[15px]">{i.title}</p>
                 {i.summary && <p className="mt-1 text-sm text-muted-foreground">{i.summary}</p>}
@@ -231,16 +258,31 @@ function DashboardPage() {
 
         {(findingsQuery.data ?? []).length > 0 && (
           <section className="space-y-3">
-            <h2 className="text-tech text-xs text-muted-foreground">Gevonden bij partners — wordt uitgewerkt tot pakket</h2>
+            <h2 className="text-tech text-xs text-muted-foreground">
+              Gevonden bij partners — wordt uitgewerkt tot pakket
+            </h2>
             <div className="panel divide-y divide-border">
               {(findingsQuery.data ?? []).map((f) => (
-                <Link key={f.id} to="/koppelingen" className="flex items-center gap-3 px-4 py-3 text-sm hover:bg-secondary/40">
+                <Link
+                  key={f.id}
+                  to="/koppelingen"
+                  className="flex items-center gap-3 px-4 py-3 text-sm hover:bg-secondary/40"
+                >
                   <span
                     className="inline-block size-2 shrink-0 rounded-full"
-                    style={{ background: f.severity === "actie" ? "var(--crit)" : f.severity === "aandacht" ? "var(--warn)" : "var(--muted-foreground)" }}
+                    style={{
+                      background:
+                        f.severity === "actie"
+                          ? "var(--crit)"
+                          : f.severity === "aandacht"
+                            ? "var(--warn)"
+                            : "var(--muted-foreground)",
+                    }}
                   />
                   <span className="min-w-0 flex-1 truncate">{f.title}</span>
-                  <span className="text-tech shrink-0 text-[10px] text-muted-foreground">{FINDING_KIND[f.kind] ?? f.kind}</span>
+                  <span className="text-tech shrink-0 text-[10px] text-muted-foreground">
+                    {FINDING_KIND[f.kind] ?? f.kind}
+                  </span>
                 </Link>
               ))}
             </div>
@@ -249,53 +291,59 @@ function DashboardPage() {
 
         {proposals.length > 0 && (
           <section className="space-y-3">
-            <h2 className="text-tech text-xs text-muted-foreground">Wacht op jouw go</h2>
-            <div className="grid gap-3 md:grid-cols-2">
-              {proposals.map((p) => (
-                <article key={p.id} className="panel p-4">
-                  <div className="flex items-center gap-2">
-                    <CategoryBadge category={p.category} />
-                    <span className="text-tech text-[10px] text-muted-foreground">{relativeTime(p.created_at)}</span>
-                  </div>
-                  <h3 className="mt-2 font-medium">{p.title}</h3>
-                  <p className="mt-1 line-clamp-3 text-sm text-muted-foreground">{p.proposed_action}</p>
-                  <div className="mt-4 flex gap-2">
-                    <Button size="sm" disabled={decide.isPending} onClick={() => decide.mutate({ id: p.id, status: "approved" })}>
-                      Go
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      disabled={decide.isPending}
-                      onClick={() => decide.mutate({ id: p.id, status: "rejected" })}
-                    >
-                      Afwijzen
-                    </Button>
-                  </div>
-                </article>
+            <div className="flex items-baseline justify-between">
+              <h2 className="text-xs font-semibold uppercase tracking-[0.1em] text-muted-foreground">
+                Wacht op jouw go
+              </h2>
+              <Link to="/proposals" className="text-xs font-medium text-primary">
+                Alle voorstellen
+              </Link>
+            </div>
+            <div className="grid gap-2 md:grid-cols-2">
+              {proposals.slice(0, 6).map((p) => (
+                <ProposalRow key={p.id} p={{ ...p, bundle_order: null }} onOpen={setOpenProposal} />
               ))}
             </div>
+            {proposals.length > 6 && (
+              <Link
+                to="/proposals"
+                className="block text-sm text-muted-foreground hover:text-foreground"
+              >
+                + {proposals.length - 6} meer
+              </Link>
+            )}
           </section>
         )}
 
         {creditsQuery.data?.top && (
-          <Link to="/kosten" className="panel flex items-center gap-4 p-5 transition-colors hover:border-primary/40">
+          <Link
+            to="/kosten"
+            className="panel flex items-center gap-4 p-5 transition-colors hover:border-primary/40"
+          >
             <span className="brand-gradient flex size-11 shrink-0 items-center justify-center rounded-2xl">
               <Coins className="size-5 text-[#06202c]" />
             </span>
             <span className="min-w-0 flex-1">
               <span className="block font-semibold">
-                {creditsQuery.data.open ? `${creditsQuery.data.open} manieren om credits te besparen` : "Credits onder controle"}
+                {creditsQuery.data.open
+                  ? `${creditsQuery.data.open} manieren om credits te besparen`
+                  : "Credits onder controle"}
               </span>
               <span className="block truncate text-sm text-muted-foreground">
                 {creditsQuery.data.top.project_name} neemt{" "}
-                {Math.round((Number(creditsQuery.data.top.exec_s_per_day) / (creditsQuery.data.total || 1)) * 100)}% van de rekentijd
+                {Math.round(
+                  (Number(creditsQuery.data.top.exec_s_per_day) / (creditsQuery.data.total || 1)) *
+                    100,
+                )}
+                % van de rekentijd
               </span>
             </span>
           </Link>
         )}
 
-        <LatencyGrid targets={targets.filter((t) => t.kind === "platform" || t.kind === "storefront")} />
+        <LatencyGrid
+          targets={targets.filter((t) => t.kind === "platform" || t.kind === "storefront")}
+        />
 
         <IncidentsWeekly />
 
@@ -314,7 +362,9 @@ function DashboardPage() {
             return (
               <div key={g.name}>
                 <div className="mb-2.5 flex items-baseline justify-between">
-                  <h2 className="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">{g.name}</h2>
+                  <h2 className="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+                    {g.name}
+                  </h2>
                   <span className="text-xs text-muted-foreground">{parts.join(" · ")}</span>
                 </div>
                 <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
@@ -358,7 +408,10 @@ function DashboardPage() {
               <Link to="/koppelingen" className="truncate hover:text-foreground">
                 Partner · {p.partner} — {p.upstream_description}
               </Link>
-              <span className="shrink-0" style={{ color: p.upstream_indicator === "minor" ? "var(--warn)" : "var(--crit)" }}>
+              <span
+                className="shrink-0"
+                style={{ color: p.upstream_indicator === "minor" ? "var(--warn)" : "var(--crit)" }}
+              >
                 {p.upstream_indicator === "minor" ? "kleine storing" : "storing"}
               </span>
             </div>
@@ -372,7 +425,11 @@ function DashboardPage() {
             </span>
           </div>
           <div className="flex justify-between gap-4">
-            <Link to="/koppelingen" className="truncate hover:text-foreground" style={{ color: eng.warn ? "var(--warn)" : undefined }}>
+            <Link
+              to="/koppelingen"
+              className="truncate hover:text-foreground"
+              style={{ color: eng.warn ? "var(--warn)" : undefined }}
+            >
               Radar · {eng.text}
             </Link>
           </div>
@@ -387,6 +444,7 @@ function DashboardPage() {
 
         {showAll && <IncidentList incidents={incidents} emptyText="Geen open incidenten." />}
       </div>
+      <ProposalSheet id={openProposal} onOpenChange={setOpenProposal} />
     </AppShell>
   );
 }

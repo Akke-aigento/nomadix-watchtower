@@ -48,8 +48,14 @@ function useBadges() {
     queryKey: ["nav_badges"],
     queryFn: async () => {
       const [p, a] = await Promise.all([
-        supabase.from("proposals").select("id", { count: "exact", head: true }).eq("status", "proposed"),
-        supabase.from("web_access").select("domain", { count: "exact", head: true }).eq("status", "gevraagd"),
+        supabase
+          .from("proposals")
+          .select("id", { count: "exact", head: true })
+          .eq("status", "proposed"),
+        supabase
+          .from("web_access")
+          .select("domain", { count: "exact", head: true })
+          .eq("status", "gevraagd"),
       ]);
       return { proposals: p.count ?? 0, access: a.count ?? 0 };
     },
@@ -82,7 +88,11 @@ export function PageHeader({
   return (
     <header className="flex flex-wrap items-end justify-between gap-4 pt-1">
       <div className="min-w-0">
-        {eyebrow && <div className="mb-2 text-xs font-semibold uppercase tracking-[0.1em] text-muted-foreground">{eyebrow}</div>}
+        {eyebrow && (
+          <div className="mb-2 text-xs font-semibold uppercase tracking-[0.1em] text-muted-foreground">
+            {eyebrow}
+          </div>
+        )}
         <h1 className="text-[28px] font-bold leading-tight tracking-tight md:text-4xl">{title}</h1>
         {subtitle && <p className="mt-2 max-w-2xl text-[15px] text-muted-foreground">{subtitle}</p>}
       </div>
@@ -106,7 +116,8 @@ export function AppShell({ children }: { children: ReactNode }) {
     navigate({ to: "/login", replace: true });
   }
 
-  const isActive = (to: string) => pathname === to || (to !== "/dashboard" && pathname.startsWith(to));
+  const isActive = (to: string) =>
+    pathname === to || (to !== "/dashboard" && pathname.startsWith(to));
 
   const sideLink = (item: NavItem) => (
     <Link
@@ -129,13 +140,17 @@ export function AppShell({ children }: { children: ReactNode }) {
         <Link to="/dashboard" className="flex items-center gap-3 px-2">
           <LogoMark className="size-9" />
           <div className="leading-tight">
-            <div className="text-[15px] font-bold tracking-tight text-sidebar-foreground">Watchtower</div>
+            <div className="text-[15px] font-bold tracking-tight text-sidebar-foreground">
+              Watchtower
+            </div>
             <div className="text-[11px] text-muted-foreground">Studio Akke · Nomadix</div>
           </div>
         </Link>
 
         <nav className="mt-8 flex flex-col gap-1">{MAIN.map(sideLink)}</nav>
-        <div className="mt-6 mb-2 px-3 text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground/70">Meer</div>
+        <div className="mt-6 mb-2 px-3 text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground/70">
+          Meer
+        </div>
         <nav className="flex flex-col gap-1">{MORE.map(sideLink)}</nav>
 
         <button
@@ -174,7 +189,12 @@ export function AppShell({ children }: { children: ReactNode }) {
                 active && "text-foreground",
               )}
             >
-              <span className={cn("flex h-7 w-12 items-center justify-center rounded-full transition-colors", active && "bg-primary/15")}>
+              <span
+                className={cn(
+                  "flex h-7 w-12 items-center justify-center rounded-full transition-colors",
+                  active && "bg-primary/15",
+                )}
+              >
                 <item.icon className={cn("size-[20px]", active && "text-primary")} />
               </span>
               {item.label}
@@ -194,16 +214,26 @@ export function AppShell({ children }: { children: ReactNode }) {
             moreActive && "text-foreground",
           )}
         >
-          <span className={cn("flex h-7 w-12 items-center justify-center rounded-full", moreActive && "bg-primary/15")}>
+          <span
+            className={cn(
+              "flex h-7 w-12 items-center justify-center rounded-full",
+              moreActive && "bg-primary/15",
+            )}
+          >
             <MoreHorizontal className={cn("size-[20px]", moreActive && "text-primary")} />
           </span>
           Meer
-          {badges.access > 0 && <span className="absolute top-2 left-1/2 ml-3 size-2 rounded-full bg-primary" />}
+          {badges.access > 0 && (
+            <span className="absolute top-2 left-1/2 ml-3 size-2 rounded-full bg-primary" />
+          )}
         </button>
       </nav>
 
       <Sheet open={moreOpen} onOpenChange={setMoreOpen}>
-        <SheetContent side="bottom" className="rounded-t-3xl border-border bg-popover pb-[calc(env(safe-area-inset-bottom)+16px)]">
+        <SheetContent
+          side="bottom"
+          className="rounded-t-3xl border-border bg-popover pb-[calc(env(safe-area-inset-bottom)+16px)]"
+        >
           <SheetHeader>
             <SheetTitle className="flex items-center gap-2 text-left">
               <LayoutGrid className="size-4 text-primary" /> Meer
