@@ -21,6 +21,11 @@ import { SceneView } from "./scenes";
 import { setAudioSession, voice } from "./voice";
 import { ProposalSheet } from "@/components/proposal-detail";
 import { cn } from "@/lib/utils";
+import { supabase } from "@/integrations/supabase/client";
+
+/** "Stop", "stop gesprek", "dat is alles"…: meteen afsluiten, zonder op het model te wachten. */
+export const STOP_RE =
+  /^\s*(ok[eé]?,?\s*)?(stop|stoppen|stop (het |de |dit )?gesprek|stop baken|baken stop|sluit (af|baken|het gesprek)|hou op|ophouden|dat is alles|dat was het|tot (straks|later)|da[gc]|doei|salut)[\s.!?]*$/i;
 
 type Mood = "rust" | "luistert" | "denkt" | "praat";
 type Turn = { id: number; role: "user" | "baken"; text: string; reply?: BakenReply };
@@ -284,8 +289,14 @@ function BakenExperience({ onClose }: { onClose: () => void }) {
       setHint("Verbinden…");
       try {
         const c = await startAgent({
-          status: (st) => {
+          status: (st, reason) => {
             if (st === "verbonden") setHint(null);
+            // Baken sloot zelf af (Akke vroeg het): scherm dicht na zijn afscheidswoord.
+            if (st === "gestopt" && reason === "agent") {
+              agent.current = null;
+              window.setTimeout(onClose, 600);
+              return;
+            }
             if (st === "gestopt") {
               agent.current = null;
               setAgentOn(false);
@@ -294,7 +305,23 @@ function BakenExperience({ onClose }: { onClose: () => void }) {
             }
           },
           mode: (m) => setMood(m === "speaking" ? "praat" : "luistert"),
+          openProposal: (ref) => {
+            if (/^[0-9a-f-]{36}$/i.test(ref)) return setProposal(ref);
+            void supabase
+              .from("proposals")
+              .select("id")
+              .ilike("title", `%${ref.replace(/[%_]/g, " ")}%`)
+              .order("created_at", { ascending: false })
+              .limit(1)
+              .then(({ data }) => data?.[0] && setProposal(data[0].id));
+          },
           message: (role, text) => {
+            if (role === "user" && STOP_RE.test(text)) {
+              void stopAgent();
+              agent.current = null;
+              onClose();
+              return;
+            }
             if (role === "user" && lastTyped.current === text) {
               lastTyped.current = null;
               return;
@@ -340,7 +367,7 @@ function BakenExperience({ onClose }: { onClose: () => void }) {
         }
       }
     },
-    [addTurn, greetClassic, say],
+    [addTurn, greetClassic, say, onClose],
   );
 
   // Openen: met agent → meteen een echt gesprek (hij groet zelf); anders de oude flow.
@@ -388,6 +415,12 @@ function BakenExperience({ onClose }: { onClose: () => void }) {
     if (!text) return;
     setHint(null);
     setInput("");
+    if (agent.current && STOP_RE.test(text)) {
+      void stopAgent();
+      agent.current = null;
+      onClose();
+      return;
+    }
     if (agent.current) {
       lastTyped.current = text;
       setTurns((t) => [...t, { id: idRef.current++, role: "user", text }]);

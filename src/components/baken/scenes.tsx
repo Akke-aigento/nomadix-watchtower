@@ -10,7 +10,12 @@ const LEVEL: Record<string, string> = {
   actie: "#fb7185",
   onbekend: "#64748b",
 };
-const SEV: Record<string, string> = { actie: "#fb7185", aandacht: "#fbbf24", info: "#7dd3fc" };
+const SEV: Record<string, string> = {
+  actie: "#fb7185",
+  aandacht: "#fbbf24",
+  info: "#7dd3fc",
+  ok: "#34d399",
+};
 
 function Card({
   children,
@@ -480,6 +485,56 @@ export function SceneView({
                     />
                   </div>
                 </Link>
+              </li>
+            ))}
+          </ul>
+        </Card>
+      );
+    }
+    case "lijst": {
+      const d = scene.data;
+      const nums = d.items.map((i) => (typeof i.waarde === "number" ? i.waarde : 0));
+      const max = Math.max(1, ...nums);
+      return (
+        <Card>
+          {d.titel && (
+            <div className="mb-3 text-xs font-semibold text-muted-foreground">{d.titel}</div>
+          )}
+          <ul className="space-y-2.5">
+            {d.items.map((it, i) => (
+              <li key={i} className="rise" style={{ animationDelay: `${i * 60}ms` }}>
+                <div className="flex items-start gap-2.5 text-sm">
+                  {it.niveau && (
+                    <span
+                      className="mt-1.5 size-2 shrink-0 rounded-full"
+                      style={{ background: SEV[it.niveau] ?? SEV.info }}
+                    />
+                  )}
+                  <span className="min-w-0 flex-1">
+                    <span className="font-medium">{it.label}</span>
+                    {it.toelichting && (
+                      <span className="block text-xs text-muted-foreground">{it.toelichting}</span>
+                    )}
+                  </span>
+                  {it.waarde !== undefined && (
+                    <span className="tabular shrink-0 font-bold">
+                      {it.waarde}
+                      {d.eenheid ? ` ${d.eenheid}` : ""}
+                    </span>
+                  )}
+                </div>
+                {d.balken && typeof it.waarde === "number" && (
+                  <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-white/[0.06]">
+                    <div
+                      className="h-full rounded-full"
+                      style={{
+                        width: `${(it.waarde / max) * 100}%`,
+                        background: "linear-gradient(90deg,#14b8a6,#06b6d4,#0ea5e9)",
+                        animation: `wt-rise 0.7s ease ${i * 70}ms both`,
+                      }}
+                    />
+                  </div>
+                )}
               </li>
             ))}
           </ul>

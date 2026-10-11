@@ -12,7 +12,17 @@ export type Scene =
   | { kind: "credits"; data: CreditLite[] }
   | { kind: "agenda"; data: AgendaLite[] }
   | { kind: "bezoekers"; data: VisitorLite[] }
-  | { kind: "vondsten"; data: FindingLite[] };
+  | { kind: "vondsten"; data: FindingLite[] }
+  | { kind: "lijst"; data: ListData };
+
+/** Vrije lijst die Baken zelf samenstelt uit wat hij opzocht (tool toon_lijst). */
+export type ListItem = {
+  label: string;
+  waarde?: number | string;
+  toelichting?: string;
+  niveau?: string;
+};
+export type ListData = { titel: string; items: ListItem[]; balken: boolean; eenheid?: string };
 
 export type BakenReply = { say: string; scenes: Scene[]; source: "lokaal" | "model" };
 

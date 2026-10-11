@@ -4,7 +4,7 @@
  * zodat er geen derde partij of lockfile-wijziging nodig is. Beurtwissel, onderbreken, echo-
  * onderdrukking en de stem regelt de SDK; Baken levert de cijfers en beelden via de tool "toon".
  */
-import { agentOpening, authHeader, toolToon, type Scene } from "./engine";
+import { agentOpening, authHeader, toolToon, type ListItem, type Scene } from "./engine";
 
 const SDK_URL = "/vendor/elevenlabs-client-1.25.0.js";
 
@@ -41,7 +41,9 @@ export function loadAgentSdk(): Promise<Sdk> {
 }
 
 export type AgentEvents = {
-  status: (s: "verbinden" | "verbonden" | "gestopt") => void;
+  /** reason bij "gestopt": "agent" = Baken sloot zelf af (bv. na "stop gesprek"). */
+  status: (s: "verbinden" | "verbonden" | "gestopt", reason?: string) => void;
+  openProposal: (ref: string) => void;
   mode: (m: "speaking" | "listening") => void;
   message: (role: "user" | "agent", text: string) => void;
   scene: (scene: Scene) => void;
@@ -119,12 +121,54 @@ export function startAgent(on: AgentEvents): Promise<AgentConversation | null> {
           if (scene && live()) on.scene(scene);
           return JSON.stringify(facts);
         },
+        toon_lijst: async (q: {
+          titel?: string;
+          items?: string;
+          balken?: boolean;
+          eenheid?: string;
+        }) => {
+          let items: ListItem[] = [];
+          try {
+            const raw = typeof q?.items === "string" ? JSON.parse(q.items) : q?.items;
+            if (Array.isArray(raw))
+              items = raw
+                .filter((x) => x && typeof x === "object" && "label" in x)
+                .slice(0, 12)
+                .map((x) => ({
+                  label: String(x.label).slice(0, 80),
+                  waarde:
+                    typeof x.waarde === "number" || typeof x.waarde === "string"
+                      ? x.waarde
+                      : undefined,
+                  toelichting: x.toelichting ? String(x.toelichting).slice(0, 120) : undefined,
+                  niveau: x.niveau ? String(x.niveau) : undefined,
+                }));
+          } catch {
+            return "items moet een JSON-lijst zijn van {label, waarde, toelichting, niveau}";
+          }
+          if (!items.length) return "geen items om te tonen";
+          if (live())
+            on.scene({
+              kind: "lijst",
+              data: {
+                titel: String(q?.titel ?? "").slice(0, 80),
+                items,
+                balken: !!q?.balken && items.every((i) => typeof i.waarde === "number"),
+                eenheid: q?.eenheid ? String(q.eenheid).slice(0, 12) : undefined,
+              },
+            });
+          return "getoond";
+        },
+        open_voorstel: async (q: { voorstel?: string }) => {
+          if (live() && q?.voorstel) on.openProposal(String(q.voorstel));
+          return "geopend op Akke's scherm";
+        },
       },
       onConnect: () => live() && on.status("verbonden"),
-      onDisconnect: () => {
+      onDisconnect: (details?: { reason?: string }) => {
         if (!live()) return;
         current = null;
-        on.status("gestopt");
+        on.status("gestopt", details?.reason);
       },
       onModeChange: ({ mode }: { mode: "speaking" | "listening" }) => live() && on.mode(mode),
       onMessage: ({

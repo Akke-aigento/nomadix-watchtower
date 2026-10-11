@@ -41,6 +41,19 @@ Hoe je werkt:
 - Zegt Akke "onthoud ..." of vertelt hij iets dat later nuttig is over hoe hij werkt of wat hij wil: "onthoud". "Vergeet ..." → "vergeet".
 - Faalt een query, lees de fout, pas aan en probeer opnieuw. Geef niet op na één poging.
 
+Verstaan:
+- Wat Akke zegt komt uit spraakherkenning, in het Vlaams, vaak onderweg. Namen worden soms verkeerd verstaan ("cell cue", "sel cu" = SellQo; "van excel" = VanXcel; "man chini" = Mancini Milano; "odo" = Odoo; "pepol" = Peppol; "bakken" of "baaken" = Baken). Neem altijd de dichtstbijzijnde bekende naam (zie de lijst met sites in de database).
+- Klinkt een vraag echt onduidelijk of half: zeg kort wat je dacht te horen en vraag of dat klopt ("Bedoel je Mancini?"). Doe dat enkel bij echte twijfel, niet bij elke zin.
+
+Stoppen:
+- Zegt Akke "stop", "stop gesprek", "dat is alles", "tot straks", "sluit af" of iets gelijkaardigs: zeg één kort afscheidswoord ("Oké, tot straks.") en roep meteen "end_call" aan. Niet verder praten.
+
+Interactief zijn:
+- Je praat én toont. Na elk antwoord met cijfers of een opsomming zet je het op Akke's scherm: "toon" voor de vaste beelden, "toon_lijst" voor alles wat je zelf opzocht (een lijst of balkjes uit je lees-resultaat; niveau ok/info/aandacht/actie kleurt het bolletje).
+- Praat je over een voorstel, open het met "open_voorstel" zodat hij meteen de details en de go-knop ziet.
+- Zie je bij het opzoeken iets dat aandacht vraagt maar waar hij niet naar vroeg, zeg het kort ("trouwens, ...").
+- Eindig waar het helpt met één korte vraag of een aanbod om verder te gaan ("zal ik dat voorstel openen?", "wil je de details per site?"). Niet na elk antwoord.
+
 Hoe je praat:
 - Vlaams Nederlands, warm en natuurlijk, zoals hardop in een gesprek. Spreek hem aan met "je".
 - Kort: meestal één tot drie zinnen. Is er meer, geef het belangrijkste en vraag of hij de rest wil.
@@ -72,6 +85,58 @@ const TOOL_CONFIG = {
     },
     required: ["onderwerp"],
   },
+};
+
+const LIST_TOOL = {
+  type: "client",
+  name: "toon_lijst",
+  description:
+    "Zet een eigen lijst op Akke's scherm, bv. het resultaat van een lees-query: per regel een label, optioneel een waarde, toelichting en niveau. Met balken=true worden de waarden als balkjes getoond.",
+  expects_response: true,
+  response_timeout_secs: 10,
+  parameters: {
+    type: "object",
+    properties: {
+      titel: { type: "string", description: "Korte titel boven de lijst." },
+      items: {
+        type: "string",
+        description:
+          'JSON-lijst, max 12: [{"label":"Mancini Milano","waarde":412,"toelichting":"gemiddelde laadtijd","niveau":"ok"}]. niveau is ok, info, aandacht of actie.',
+      },
+      balken: {
+        type: "boolean",
+        description: "true als de waarden getallen zijn die je wil vergelijken.",
+      },
+      eenheid: { type: "string", description: "Eenheid achter de waarde, bv. ms, €, bezoekers." },
+    },
+    required: ["titel", "items"],
+  },
+};
+
+const PROPOSAL_TOOL = {
+  type: "client",
+  name: "open_voorstel",
+  description: "Opent een voorstel op Akke's scherm met alle uitleg en de go-knop.",
+  expects_response: true,
+  response_timeout_secs: 10,
+  parameters: {
+    type: "object",
+    properties: {
+      voorstel: {
+        type: "string",
+        description: "De id of (een stuk van) de titel van het voorstel.",
+      },
+    },
+    required: ["voorstel"],
+  },
+};
+
+const END_CALL_TOOL = {
+  type: "system",
+  name: "end_call",
+  description:
+    "Beëindigt het gesprek. Gebruik dit meteen na een kort afscheid wanneer Akke 'stop', 'stop gesprek', 'dat is alles', 'tot straks' of iets gelijkaardigs zegt.",
+  params: { system_tool_type: "end_call" },
 };
 
 type Prop = { type: string; description: string };
@@ -164,7 +229,49 @@ async function el(key: string, path: string, init?: { method?: string; body?: un
   return (text ? JSON.parse(text) : {}) as Json;
 }
 
-function agentBody(toolIds: string[], llm: string, schema: string) {
+const KEYWORDS = [
+  "Baken",
+  "Watchtower",
+  "Nomadix",
+  "SellQo",
+  "VanXcel",
+  "Mancini Milano",
+  "Loveke",
+  "Astra Sleep",
+  "Zona Dorata",
+  "Benny Rich",
+  "AigenTo",
+  "Toog",
+  "Studio Akke",
+  "Fonske Crawl",
+  "Yeketi",
+  "Odoo",
+  "Peppol",
+  "Lovable",
+  "Stripe",
+  "bol.com",
+  "Sendcloud",
+  "Printful",
+  "Shopify",
+  "Meta",
+  "Resend",
+  "Migadu",
+  "Cloudflare",
+  "ElevenLabs",
+  "Supabase",
+  "credits",
+  "incident",
+  "voorstel",
+  "pakket",
+  "agenda",
+  "koppeling",
+  "vondst",
+  "go",
+  "afwijzen",
+  "erkennen",
+];
+
+function agentBody(toolIds: string[], llm: string, schema: string, siteNames: string[] | null) {
   return {
     name: AGENT_NAME,
     conversation_config: {
@@ -178,6 +285,27 @@ function agentBody(toolIds: string[], llm: string, schema: string) {
           tool_ids: toolIds,
         },
       },
+      ...(siteNames
+        ? {
+            asr: {
+              quality: "high",
+              keywords: [...new Set([...KEYWORDS, ...siteNames])].slice(0, 100),
+            },
+            turn: {
+              // Laat Akke uitspreken (Vlaamse pauzes), en herbeluister bij twijfel.
+              turn_eagerness: "patient",
+              retranscribe_on_turn_timeout: true,
+              // Tijdens het opzoeken iets zeggen, zodat het nooit stil valt.
+              soft_timeout_config: {
+                timeout_seconds: 2.5,
+                message: "Momentje, ik kijk het na.",
+                additional_soft_timeout_messages: ["Even kijken.", "Ik zoek het op.", "Seconde."],
+                randomize_fillers: true,
+                max_soft_timeouts_per_generation: 1,
+              },
+            },
+          }
+        : {}),
       tts: {
         model_id: process.env.BAKEN_AGENT_TTS_MODEL || "eleven_flash_v2_5",
         voice_id: process.env.BAKEN_VOICE_ID || "JBFqnCBsd6RMkjVDRZzb",
@@ -201,6 +329,13 @@ async function readSchema(): Promise<string> {
   return (data as { t: string; c: string }[]).map((r) => `- ${r.t}(${r.c})`).join("\n");
 }
 
+/** Namen van alle sites, zodat de spraakherkenning ze beter verstaat. */
+async function readSiteNames(): Promise<string[]> {
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const { data } = await supabaseAdmin.from("watch_targets").select("name").eq("enabled", true);
+  return (data ?? []).map((d) => d.name).filter(Boolean);
+}
+
 async function upsertTool(
   key: string,
   existing: { id: string; tool_config?: { name?: string } }[],
@@ -217,9 +352,9 @@ async function upsertTool(
 }
 
 // Per worker-instantie: één keer opzoeken/bijwerken, daarna enkel nog tokens halen.
-let ready: Promise<{ agentId: string; llm: string }> | null = null;
+let ready: Promise<{ agentId: string; llm: string; level: string }> | null = null;
 
-async function ensureAgent(key: string): Promise<{ agentId: string; llm: string }> {
+async function ensureAgent(key: string): Promise<{ agentId: string; llm: string; level: string }> {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   const { data: token } = await supabaseAdmin.rpc("get_baken_tool_token");
   if (typeof token !== "string" || !token) throw new Error("geen baken_tool_token");
@@ -230,11 +365,18 @@ async function ensureAgent(key: string): Promise<{ agentId: string; llm: string 
     tool_config?: { name?: string };
   }[];
   const toolIds: string[] = [];
-  for (const cfg of [TOOL_CONFIG, ...serverTools(token)])
+  for (const cfg of [TOOL_CONFIG, LIST_TOOL, PROPOSAL_TOOL, ...serverTools(token)])
     toolIds.push(await upsertTool(key, existing, cfg));
+  // Systeemtool om zelf op te hangen; lukt die niet, dan stopt de app het gesprek nog altijd zelf.
+  try {
+    toolIds.push(await upsertTool(key, existing, END_CALL_TOOL));
+  } catch (e) {
+    console.warn("baken end_call", e);
+  }
 
   // 2. agent (vaste id via env, anders op naam), met het sterkste model dat ElevenLabs aanvaardt
   const schema = await readSchema();
+  const siteNames = await readSiteNames();
   let agentId = process.env.BAKEN_AGENT_ID;
   if (!agentId) {
     const list = ((
@@ -243,24 +385,26 @@ async function ensureAgent(key: string): Promise<{ agentId: string; llm: string 
     agentId = list.find((a) => a.name === AGENT_NAME)?.agent_id;
   }
   let lastError: unknown = null;
+  // Eerst alles (beter verstaan + vulwoorden); weigert ElevenLabs een van die instellingen,
+  // dan zonder, zodat Baken nooit stilvalt door een nieuwe optie.
+  const extras: Array<"vol" | "basis"> = ["vol", "basis"];
   for (const llm of LLMS) {
-    try {
-      if (agentId) {
-        await el(key, `/convai/agents/${agentId}`, {
-          method: "PATCH",
-          body: agentBody(toolIds, llm, schema),
-        });
-        return { agentId, llm };
+    for (const level of extras) {
+      const body = agentBody(toolIds, llm, schema, level === "vol" ? siteNames : null);
+      try {
+        if (agentId) {
+          await el(key, `/convai/agents/${agentId}`, { method: "PATCH", body });
+          return { agentId, llm, level };
+        }
+        const created = await el(key, "/convai/agents/create", { method: "POST", body });
+        return { agentId: String(created.agent_id), llm, level };
+      } catch (e) {
+        lastError = e;
+        // Enkel bij een geweigerde instelling of model verder proberen; andere fouten meteen melden.
+        if (!/llm|model|enum|422|400/i.test(String(e))) throw e;
+        if (/llm|model/i.test(String(e)) && !/asr|turn|keyword|soft_timeout/i.test(String(e)))
+          break;
       }
-      const created = await el(key, "/convai/agents/create", {
-        method: "POST",
-        body: agentBody(toolIds, llm, schema),
-      });
-      return { agentId: String(created.agent_id), llm };
-    } catch (e) {
-      lastError = e;
-      // Enkel bij een geweigerd model het volgende proberen; andere fouten meteen melden.
-      if (!/llm|model|enum|422/i.test(String(e))) throw e;
     }
   }
   throw lastError ?? new Error("geen model aanvaard");
@@ -297,7 +441,7 @@ export const Route = createFileRoute("/api/baken-agent")({
           // Zelftest met ?force=1: agent opnieuw opbouwen (na een prompt- of toolwijziging).
           if (ok && new URL(request.url).searchParams.get("force") === "1") ready = null;
           ready ??= ensureAgent(key);
-          const { agentId, llm } = await ready.catch((e) => {
+          const { agentId, llm, level } = await ready.catch((e) => {
             ready = null; // volgende keer opnieuw proberen
             throw e;
           });
@@ -306,7 +450,8 @@ export const Route = createFileRoute("/api/baken-agent")({
             `/convai/conversation/token?agent_id=${encodeURIComponent(agentId)}`,
           );
           // Zelftest (cron-secret): geen token teruggeven, enkel bevestigen dat alles klaarstaat.
-          if (ok) return Response.json({ ready: true, agent: true, llm, token: !!tok.token });
+          if (ok)
+            return Response.json({ ready: true, agent: true, llm, level, token: !!tok.token });
           return Response.json({ token: tok.token, geheugen: await memoryLine() });
         } catch (e) {
           console.error("baken-agent", e);
