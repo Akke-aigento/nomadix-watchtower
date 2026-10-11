@@ -35,6 +35,7 @@ import { Route as ApiPublicIngestScanRouteImport } from './routes/api/public/ing
 import { Route as ApiPublicMorningBriefRouteImport } from './routes/api/public/morning-brief'
 import { Route as ApiPublicNotifyRouteImport } from './routes/api/public/notify'
 import { Route as ApiPublicRunScansRouteImport } from './routes/api/public/run-scans'
+import { Route as ApiPublicSelftestRouteImport } from './routes/api/public/selftest'
 import { Route as ApiPushTestRouteImport } from './routes/api/push/test'
 
 const IndexRoute = IndexRouteImport.update({
@@ -167,6 +168,11 @@ const ApiPublicRunScansRoute = ApiPublicRunScansRouteImport.update({
   path: '/api/public/run-scans',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicSelftestRoute = ApiPublicSelftestRouteImport.update({
+  id: '/api/public/selftest',
+  path: '/api/public/selftest',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPushTestRoute = ApiPushTestRouteImport.update({
   id: '/api/push/test',
   path: '/api/push/test',
@@ -199,6 +205,7 @@ export interface FileRoutesByFullPath {
   '/api/public/morning-brief': typeof ApiPublicMorningBriefRoute
   '/api/public/notify': typeof ApiPublicNotifyRoute
   '/api/public/run-scans': typeof ApiPublicRunScansRoute
+  '/api/public/selftest': typeof ApiPublicSelftestRoute
   '/api/push/test': typeof ApiPushTestRoute
 }
 export interface FileRoutesByTo {
@@ -227,6 +234,7 @@ export interface FileRoutesByTo {
   '/api/public/morning-brief': typeof ApiPublicMorningBriefRoute
   '/api/public/notify': typeof ApiPublicNotifyRoute
   '/api/public/run-scans': typeof ApiPublicRunScansRoute
+  '/api/public/selftest': typeof ApiPublicSelftestRoute
   '/api/push/test': typeof ApiPushTestRoute
 }
 export interface FileRoutesById {
@@ -257,6 +265,7 @@ export interface FileRoutesById {
   '/api/public/morning-brief': typeof ApiPublicMorningBriefRoute
   '/api/public/notify': typeof ApiPublicNotifyRoute
   '/api/public/run-scans': typeof ApiPublicRunScansRoute
+  '/api/public/selftest': typeof ApiPublicSelftestRoute
   '/api/push/test': typeof ApiPushTestRoute
 }
 export interface FileRouteTypes {
@@ -287,6 +296,7 @@ export interface FileRouteTypes {
     | '/api/public/morning-brief'
     | '/api/public/notify'
     | '/api/public/run-scans'
+    | '/api/public/selftest'
     | '/api/push/test'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -315,6 +325,7 @@ export interface FileRouteTypes {
     | '/api/public/morning-brief'
     | '/api/public/notify'
     | '/api/public/run-scans'
+    | '/api/public/selftest'
     | '/api/push/test'
   id:
     | '__root__'
@@ -344,6 +355,7 @@ export interface FileRouteTypes {
     | '/api/public/morning-brief'
     | '/api/public/notify'
     | '/api/public/run-scans'
+    | '/api/public/selftest'
     | '/api/push/test'
   fileRoutesById: FileRoutesById
 }
@@ -364,6 +376,7 @@ export interface RootRouteChildren {
   ApiPublicMorningBriefRoute: typeof ApiPublicMorningBriefRoute
   ApiPublicNotifyRoute: typeof ApiPublicNotifyRoute
   ApiPublicRunScansRoute: typeof ApiPublicRunScansRoute
+  ApiPublicSelftestRoute: typeof ApiPublicSelftestRoute
   ApiPushTestRoute: typeof ApiPushTestRoute
 }
 
@@ -551,6 +564,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicRunScansRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/selftest': {
+      id: '/api/public/selftest'
+      path: '/api/public/selftest'
+      fullPath: '/api/public/selftest'
+      preLoaderRoute: typeof ApiPublicSelftestRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/push/test': {
       id: '/api/push/test'
       path: '/api/push/test'
@@ -607,6 +627,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicMorningBriefRoute: ApiPublicMorningBriefRoute,
   ApiPublicNotifyRoute: ApiPublicNotifyRoute,
   ApiPublicRunScansRoute: ApiPublicRunScansRoute,
+  ApiPublicSelftestRoute: ApiPublicSelftestRoute,
   ApiPushTestRoute: ApiPushTestRoute,
 }
 export const routeTree = rootRouteImport

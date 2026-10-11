@@ -143,6 +143,39 @@ function DashboardPage() {
     },
   });
   const engine = useEngineHealth();
+  const selftest = useQuery({
+    queryKey: ["selftest_latest"],
+    queryFn: async () => {
+      const { data } = await (
+        supabase as unknown as {
+          from: (t: string) => {
+            select: (c: string) => {
+              order: (
+                c: string,
+                o: object,
+              ) => {
+                limit: (n: number) => Promise<{
+                  data: Array<{
+                    ran_at: string;
+                    ok: boolean;
+                    passed: number;
+                    failed: number;
+                    results: Array<{ name: string; ok: boolean; detail?: string }>;
+                  }> | null;
+                }>;
+              };
+            };
+          };
+        }
+      )
+        .from("selftest_runs")
+        .select("ran_at, ok, passed, failed, results")
+        .order("ran_at", { ascending: false })
+        .limit(1);
+      return data?.[0] ?? null;
+    },
+    refetchInterval: 300_000,
+  });
   const eng = engineLine(engine.data);
   const incidentsQuery = useIncidents();
   const targets = targetsQuery.data ?? [];
@@ -470,6 +503,27 @@ function DashboardPage() {
               Radar · {eng.text}
             </Link>
           </div>
+          {selftest.data && (
+            <div className="flex justify-between gap-4">
+              <span
+                className="truncate"
+                style={{ color: selftest.data.ok ? undefined : "var(--warn)" }}
+                title={selftest.data.results
+                  .filter((r) => !r.ok)
+                  .map((r) => `${r.name}: ${r.detail ?? ""}`)
+                  .join("\n")}
+              >
+                Zelftest ·{" "}
+                {selftest.data.ok
+                  ? `alle ${selftest.data.passed} functies werken`
+                  : `${selftest.data.failed} kapot: ${selftest.data.results
+                      .filter((r) => !r.ok)
+                      .map((r) => r.name)
+                      .join(", ")}`}
+              </span>
+              <span className="shrink-0">{relativeTime(selftest.data.ran_at)}</span>
+            </div>
+          )}
           <button
             type="button"
             className="pt-2 text-xs underline-offset-4 hover:underline"
