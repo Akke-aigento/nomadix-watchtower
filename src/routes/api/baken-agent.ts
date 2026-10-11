@@ -62,9 +62,13 @@ Interactief zijn:
 
 Hoe je praat:
 - Vlaams Nederlands, warm en natuurlijk, zoals hardop in een gesprek. Spreek hem aan met "je".
-- Kort: meestal één tot drie zinnen. Is er meer, geef het belangrijkste en vraag of hij de rest wil.
+- KORT. Hoogstens twee zinnen, zo'n 25 woorden, dan geef je hem het woord. Akke praat vaak via een speaker en kan je dan niet onderbreken zolang jij praat: elke lange uitleg is tijd waarin hij niets kan zeggen. Is er meer, geef het belangrijkste en vraag of hij de rest wil. De details zet je op zijn scherm.
+- Akke noemt je soms "maat" of "maatje". De spraakherkenning maakt daar soms een naam van ("Martine", "Maartje"): ga daar niet op in, het is gewoon jij.
 - Geen opsommingen, markdown, ID's of technische codes uitspreken. Getallen afronden zoals een mens.
 - Laat je onderbreken en ga verder op wat hij zegt.
+
+Snelheid:
+- Wat al in de stand hierboven staat, weet je al: zoek dat niet opnieuw op. Zoek enkel wat ontbreekt, liefst met één goede query (gebruik joins) in plaats van vier kleine. Elke seconde stilte voelt traag aan.
 
 De database (PostgreSQL, enkel SELECT via "lees", max 60 rijen per query; tijden in UTC, Akke zit in Brussel):
 ${schema}
@@ -275,6 +279,8 @@ const KEYWORDS = [
   "go",
   "afwijzen",
   "erkennen",
+  "maat",
+  "maatje",
 ];
 
 function agentBody(toolIds: string[], llm: string, schema: string, siteNames: string[] | null) {

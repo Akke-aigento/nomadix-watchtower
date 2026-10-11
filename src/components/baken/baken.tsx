@@ -199,6 +199,8 @@ function BakenExperience({ onClose }: { onClose: () => void }) {
   interruptRef.current = interrupt;
   const unmuteTimer = useRef<number | null>(null);
   const lastMode = useRef<"speaking" | "listening">("listening");
+  /** Akke onderbrak met een tik: de rest van dat antwoord blijft stil. */
+  const cutOff = useRef(false);
   const gateMic = useCallback((speaking: boolean) => {
     const c = agent.current;
     if (!c) return;
@@ -349,6 +351,18 @@ function BakenExperience({ onClose }: { onClose: () => void }) {
             }
           },
           mode: (m) => {
+            // Na een onderbreking: het oude antwoord blijft stil tot hij terug luistert,
+            // het volgende antwoord hoor je weer gewoon.
+            if (cutOff.current) {
+              if (m === "listening") {
+                cutOff.current = false;
+                if (soundRef.current) agent.current?.setVolume({ volume: 1 });
+              }
+              lastMode.current = m;
+              agent.current?.setMicMuted(false);
+              setMood("luistert");
+              return;
+            }
             lastMode.current = m;
             setMood(m === "speaking" ? "praat" : "luistert");
             gateMic(m === "speaking");
@@ -503,6 +517,17 @@ function BakenExperience({ onClose }: { onClose: () => void }) {
   const tapTalk = () => {
     voice.unlock();
     setHint(null);
+    if (agent.current && mood === "praat") {
+      // Tik terwijl Baken praat = onderbreken: zijn stem uit, micro open, jij hebt het woord.
+      // Zodra hij aan een nieuw antwoord begint (of terug luistert), komt zijn stem terug.
+      cutOff.current = true;
+      agent.current.setVolume({ volume: 0 });
+      if (unmuteTimer.current) window.clearTimeout(unmuteTimer.current);
+      agent.current.setMicMuted(false);
+      setMood("luistert");
+      setHint("Ik luister…");
+      return;
+    }
     if (agent.current) {
       // Tik tijdens een agent-gesprek = gesprek stoppen.
       void stopAgent();
@@ -635,7 +660,9 @@ function BakenExperience({ onClose }: { onClose: () => void }) {
                   (agentOn
                     ? interrupt
                       ? "Gewoon praten · onderbreken mag · zeg 'stop' om te stoppen"
-                      : "Gewoon praten · ik luister als ik uitgesproken ben · zeg 'stop' om te stoppen"
+                      : mood === "praat"
+                        ? "Tik op het baken om hem te onderbreken"
+                        : "Gewoon praten · zeg 'stop' om te stoppen"
                     : mood === "praat"
                       ? "Tik om te onderbreken"
                       : convoOn
