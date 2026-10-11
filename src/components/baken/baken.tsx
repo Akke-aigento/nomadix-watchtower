@@ -9,7 +9,14 @@ import {
 } from "react";
 import { ArrowUp, Mic, MicOff, Volume2, VolumeX, X } from "lucide-react";
 import { ask, capabilities, greet, type BakenReply, type Scene } from "./engine";
-import { startAgent, type AgentConversation } from "./agent";
+import {
+  AgentCancelled,
+  agentBusy,
+  onAppHidden,
+  startAgent,
+  stopAgent,
+  type AgentConversation,
+} from "./agent";
 import { SceneView } from "./scenes";
 import { setAudioSession, voice } from "./voice";
 import { ProposalSheet } from "@/components/proposal-detail";
@@ -316,10 +323,12 @@ function BakenExperience({ onClose }: { onClose: () => void }) {
           error: (m) => console.warn("baken agent", m),
         });
         if (!c) throw new Error("geen agent");
+        if (agent.current === c) return; // dubbele tik: hetzelfde gesprek, niets nieuws
         agent.current = c;
         setAgentOn(true);
         if (!soundRef.current) c.setVolume({ volume: 0 });
       } catch (e) {
+        if (e instanceof AgentCancelled) return; // bewust gestopt (sluiten, app weg): stil blijven
         console.warn("baken agent niet beschikbaar", e);
         agent.current = null;
         setAgentOn(false);
@@ -345,9 +354,9 @@ function BakenExperience({ onClose }: { onClose: () => void }) {
     });
     return () => {
       alive = false;
-      const c = agent.current;
       agent.current = null;
-      void (c?.endSession() ?? Promise.resolve()).finally(() => voice.release());
+      // Ook een gesprek dat nog aan het verbinden is, wordt gestopt.
+      void stopAgent().finally(() => voice.release());
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -413,9 +422,14 @@ function BakenExperience({ onClose }: { onClose: () => void }) {
     setHint(null);
     if (agent.current) {
       // Tik tijdens een agent-gesprek = gesprek stoppen.
-      void agent.current.endSession();
+      void stopAgent();
+      agent.current = null;
+      setAgentOn(false);
+      setMood("rust");
+      setHint("Gesprek gestopt · tik op het baken om verder te praten");
       return;
     }
+    if (agentBusy()) return; // nog aan het verbinden: geen tweede gesprek starten
     if (agentOn === false && capsAgent.current) {
       void connectAgent(false);
       return;
@@ -641,7 +655,16 @@ export function BakenProvider({ children }: { children: ReactNode }) {
   // Watchtower openen mag je muziek nooit onderbreken: enkel tijdens een gesprek claimt Baken audio.
   useEffect(() => {
     setAudioSession("ambient");
-    return () => voice.release();
+    // App weg (achtergrond, gesloten, scherm uit): gesprek stoppen, micro vrij, Baken dicht.
+    const off = onAppHidden(() => {
+      voice.release();
+      setOpen(false);
+    });
+    return () => {
+      off();
+      void stopAgent();
+      voice.release();
+    };
   }, []);
   useEffect(() => {
     if (!open) return;
