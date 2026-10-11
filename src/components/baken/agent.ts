@@ -122,7 +122,11 @@ export function startAgent(on: AgentEvents): Promise<AgentConversation | null> {
       console.warn("baken-agent", tokenRes.status, await tokenRes.text().catch(() => ""));
       return null;
     }
-    const { token, geheugen } = (await tokenRes.json()) as { token?: string; geheugen?: string };
+    const { token, geheugen, dossier } = (await tokenRes.json()) as {
+      token?: string;
+      geheugen?: string;
+      dossier?: string;
+    };
     if (!token) return null;
     if (!live()) throw new AgentCancelled();
     on.scene(opening.scene);
@@ -135,6 +139,7 @@ export function startAgent(on: AgentEvents): Promise<AgentConversation | null> {
         begroeting: opening.begroeting,
         stand: opening.stand,
         geheugen: geheugen || "nog niets",
+        dossier: dossier || opening.stand,
       },
       clientTools: {
         toon: async (q: { onderwerp?: string; site?: string }) => {
@@ -179,6 +184,13 @@ export function startAgent(on: AgentEvents): Promise<AgentConversation | null> {
               },
             });
           return "getoond";
+        },
+        open_link: async (q: { url?: string }) => {
+          const url = String(q?.url ?? "");
+          if (!/^https:\/\/[a-z0-9.-]+\.[a-z]{2,}(\/|$)/i.test(url))
+            return "geen geldig https-adres";
+          if (live()) window.open(url, "_blank", "noopener");
+          return "geopend";
         },
         open_voorstel: async (q: { voorstel?: string }) => {
           if (live() && q?.voorstel) on.openProposal(String(q.voorstel));
