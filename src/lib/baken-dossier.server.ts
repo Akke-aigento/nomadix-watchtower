@@ -128,7 +128,12 @@ export async function buildDossier(): Promise<string> {
 
   lines.push("\nAGENDA (te laat of binnen 45 dagen):");
   if (!(agenda.data ?? []).length) lines.push("- niets");
-  for (const a of agenda.data ?? []) lines.push(`- ${day(a.due_date)}: ${a.title} [${a.severity}]`);
+  for (const a of agenda.data ?? []) {
+    const late = Math.round((now.getTime() - Date.parse(a.due_date)) / 86400000);
+    lines.push(
+      `- ${day(a.due_date)} ${a.due_date.slice(0, 4)}${late > 0 ? ` (${late} dagen te laat)` : ""}: ${a.title} [${a.severity}]`,
+    );
+  }
 
   lines.push("\nKOPPELINGEN (in gebruik of met risico):");
   for (const i of integrations.data ?? [])
