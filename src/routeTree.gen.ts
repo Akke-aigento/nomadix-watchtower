@@ -25,6 +25,7 @@ import { Route as ApiBakenAgentRouteImport } from './routes/api/baken-agent'
 import { Route as ApiBakenSttRouteImport } from './routes/api/baken-stt'
 import { Route as ApiBakenToolRouteImport } from './routes/api/baken-tool'
 import { Route as ApiBakenTtsRouteImport } from './routes/api/baken-tts'
+import { Route as ApiFrameCheckRouteImport } from './routes/api/frame-check'
 import { Route as AuthenticatedTargetIdRouteImport } from './routes/_authenticated/target.$id'
 import { Route as AuthenticatedTargetsNewRouteImport } from './routes/_authenticated/targets/new'
 import { Route as ApiPublicAgendaDoticsRouteImport } from './routes/api/public/agenda[.]ics'
@@ -115,6 +116,11 @@ const ApiBakenTtsRoute = ApiBakenTtsRouteImport.update({
   path: '/api/baken-tts',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiFrameCheckRoute = ApiFrameCheckRouteImport.update({
+  id: '/api/frame-check',
+  path: '/api/frame-check',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthenticatedTargetIdRoute = AuthenticatedTargetIdRouteImport.update({
   id: '/target/$id',
   path: '/target/$id',
@@ -177,6 +183,7 @@ export interface FileRoutesByFullPath {
   '/api/baken-stt': typeof ApiBakenSttRoute
   '/api/baken-tool': typeof ApiBakenToolRoute
   '/api/baken-tts': typeof ApiBakenTtsRoute
+  '/api/frame-check': typeof ApiFrameCheckRoute
   '/target/$id': typeof AuthenticatedTargetIdRoute
   '/targets/new': typeof AuthenticatedTargetsNewRoute
   '/api/public/agenda.ics': typeof ApiPublicAgendaDoticsRoute
@@ -203,6 +210,7 @@ export interface FileRoutesByTo {
   '/api/baken-stt': typeof ApiBakenSttRoute
   '/api/baken-tool': typeof ApiBakenToolRoute
   '/api/baken-tts': typeof ApiBakenTtsRoute
+  '/api/frame-check': typeof ApiFrameCheckRoute
   '/target/$id': typeof AuthenticatedTargetIdRoute
   '/targets/new': typeof AuthenticatedTargetsNewRoute
   '/api/public/agenda.ics': typeof ApiPublicAgendaDoticsRoute
@@ -231,6 +239,7 @@ export interface FileRoutesById {
   '/api/baken-stt': typeof ApiBakenSttRoute
   '/api/baken-tool': typeof ApiBakenToolRoute
   '/api/baken-tts': typeof ApiBakenTtsRoute
+  '/api/frame-check': typeof ApiFrameCheckRoute
   '/_authenticated/target/$id': typeof AuthenticatedTargetIdRoute
   '/_authenticated/targets/new': typeof AuthenticatedTargetsNewRoute
   '/api/public/agenda.ics': typeof ApiPublicAgendaDoticsRoute
@@ -259,6 +268,7 @@ export interface FileRouteTypes {
     | '/api/baken-stt'
     | '/api/baken-tool'
     | '/api/baken-tts'
+    | '/api/frame-check'
     | '/target/$id'
     | '/targets/new'
     | '/api/public/agenda.ics'
@@ -285,6 +295,7 @@ export interface FileRouteTypes {
     | '/api/baken-stt'
     | '/api/baken-tool'
     | '/api/baken-tts'
+    | '/api/frame-check'
     | '/target/$id'
     | '/targets/new'
     | '/api/public/agenda.ics'
@@ -312,6 +323,7 @@ export interface FileRouteTypes {
     | '/api/baken-stt'
     | '/api/baken-tool'
     | '/api/baken-tts'
+    | '/api/frame-check'
     | '/_authenticated/target/$id'
     | '/_authenticated/targets/new'
     | '/api/public/agenda.ics'
@@ -332,6 +344,7 @@ export interface RootRouteChildren {
   ApiBakenSttRoute: typeof ApiBakenSttRoute
   ApiBakenToolRoute: typeof ApiBakenToolRoute
   ApiBakenTtsRoute: typeof ApiBakenTtsRoute
+  ApiFrameCheckRoute: typeof ApiFrameCheckRoute
   ApiPublicAgendaDoticsRoute: typeof ApiPublicAgendaDoticsRoute
   ApiPublicCheckRoute: typeof ApiPublicCheckRoute
   ApiPublicDailyRollupRoute: typeof ApiPublicDailyRollupRoute
@@ -455,6 +468,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiBakenTtsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/frame-check': {
+      id: '/api/frame-check'
+      path: '/api/frame-check'
+      fullPath: '/api/frame-check'
+      preLoaderRoute: typeof ApiFrameCheckRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/_authenticated/target/$id': {
       id: '/_authenticated/target/$id'
       path: '/target/$id'
@@ -559,6 +579,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiBakenSttRoute: ApiBakenSttRoute,
   ApiBakenToolRoute: ApiBakenToolRoute,
   ApiBakenTtsRoute: ApiBakenTtsRoute,
+  ApiFrameCheckRoute: ApiFrameCheckRoute,
   ApiPublicAgendaDoticsRoute: ApiPublicAgendaDoticsRoute,
   ApiPublicCheckRoute: ApiPublicCheckRoute,
   ApiPublicDailyRollupRoute: ApiPublicDailyRollupRoute,

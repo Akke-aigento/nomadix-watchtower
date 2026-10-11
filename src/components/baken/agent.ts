@@ -44,6 +44,8 @@ export type AgentEvents = {
   /** reason bij "gestopt": "agent" = Baken sloot zelf af (bv. na "stop gesprek"). */
   status: (s: "verbinden" | "verbonden" | "gestopt", reason?: string) => void;
   openProposal: (ref: string) => void;
+  /** Toon een site in een kader binnen Baken (of, als dat niet mag, een knop om hem te openen). */
+  openFrame: (url: string, frameable: boolean) => void;
   mode: (m: "speaking" | "listening") => void;
   message: (role: "user" | "agent", text: string) => void;
   scene: (scene: Scene) => void;
@@ -189,8 +191,19 @@ export function startAgent(on: AgentEvents): Promise<AgentConversation | null> {
           const url = String(q?.url ?? "");
           if (!/^https:\/\/[a-z0-9.-]+\.[a-z]{2,}(\/|$)/i.test(url))
             return "geen geldig https-adres";
-          if (live()) window.open(url, "_blank", "noopener");
-          return "geopend";
+          let frameable = false;
+          try {
+            const r = await fetch(`/api/frame-check?url=${encodeURIComponent(url)}`, {
+              headers: await authHeader(),
+            });
+            frameable = !!((await r.json()) as { frameable?: boolean }).frameable;
+          } catch {
+            /* dan een knop om te openen */
+          }
+          if (live()) on.openFrame(url, frameable);
+          return frameable
+            ? "staat in een venster op zijn scherm, het gesprek loopt door"
+            : "deze site laat zich niet insluiten; er staat een knop om hem in een nieuw tabblad te openen";
         },
         open_voorstel: async (q: { voorstel?: string }) => {
           if (live() && q?.voorstel) on.openProposal(String(q.voorstel));
@@ -246,8 +259,13 @@ export function onAppHidden(fn: () => void): () => void {
   hiddenListeners.add(fn);
   if (!lifecycleWired && typeof document !== "undefined") {
     lifecycleWired = true;
+    // Op gsm (app op de achtergrond, scherm uit) stoppen we meteen. Op desktop is een ander
+    // tabblad openen géén reden om het gesprek af te breken; daar stopt enkel pagehide.
+    const mobile = () =>
+      window.matchMedia?.("(pointer: coarse)").matches ||
+      window.matchMedia?.("(display-mode: standalone)").matches;
     const hide = () => {
-      if (document.visibilityState !== "hidden") return;
+      if (document.visibilityState !== "hidden" || !mobile()) return;
       void stopAgent();
       hiddenListeners.forEach((f) => f());
     };

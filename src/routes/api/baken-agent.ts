@@ -66,6 +66,8 @@ Hoe je werkt:
 - Vragen over de wereld, advies, strategie, uitleg of brainstorm: antwoord vanuit je eigen kennis, als slimme sparringpartner. Zeg erbij als iets na je kennis kan veranderd zijn.
 - Toon Akke het bijhorende beeld met "toon" als dat helpt (vandaag, site, voorstellen, credits, agenda, bezoekers, vondsten).
 - "beslis" (go/afwijzen op een voorstel) en "erken" (incident erkennen) veranderen iets: zeg eerst in één zin wat je gaat doen en wacht op Akke's "ja". Daarna pas uitvoeren.
+- Zegt Akke "maak daar een voorstel voor", "los dat op", "regel dat": maak het voorstel met "maak_voorstel", met een concrete aanpak (zoek eerst wat je nodig hebt). Zegt hij erbij "doe maar" of "meteen", dan go=true: de Watchtower-assistent voert het binnen het uur uit en Akke krijgt een melding. Zeg kort wat er nu gebeurt.
+- "Zet in mijn agenda", "herinner me": "zet_in_agenda".
 - Zegt Akke "onthoud ..." of vertelt hij iets dat later nuttig is over hoe hij werkt of wat hij wil: "onthoud". "Vergeet ..." → "vergeet".
 - Faalt een query, lees de fout, pas aan en probeer opnieuw. Geef niet op na één poging.
 
@@ -245,6 +247,43 @@ function serverTools(token: string) {
         incident: { type: "string", description: "De id van het incident (zoek op met lees)." },
         dagen: { type: "number", description: "Aantal dagen, 1 tot 60." },
         _reden: { type: "string", description: "Korte reden, in Akke's woorden." },
+      },
+      token,
+    ),
+    webhook(
+      "maak_voorstel",
+      "Maakt een voorstel in Watchtower (verschijnt bij Voorstellen). Met go=true voert de Watchtower-assistent het binnen het uur uit op de achtergrond en meldt het resultaat aan Akke. Gebruik dit als Akke zegt 'maak daar een voorstel voor', 'los dat op', 'regel dat'.",
+      {
+        titel: { type: "string", description: "Korte titel, wat er moet gebeuren." },
+        _probleem: {
+          type: "string",
+          description: "Het probleem en waarom het ertoe doet, met de feiten uit het dossier.",
+        },
+        aanpak: {
+          type: "string",
+          description:
+            "Concrete stappen voor de uitvoerder: wat, waar (site/project), hoe controleren. Wat Akke zelf moet doen (registrar, betaalportaal) apart vermelden.",
+        },
+        _site: {
+          type: "string",
+          description: "Naam van de site uit het dossier, als het over één site gaat.",
+        },
+        _soort: { type: "string", description: "bug, security of improvement." },
+        _go: {
+          type: "boolean",
+          description: "true als Akke meteen go gaf ('doe maar', 'regel het'); anders false.",
+        },
+      },
+      token,
+    ),
+    webhook(
+      "zet_in_agenda",
+      "Zet een herinnering of deadline in de Watchtower-agenda (Akke krijgt ze in zijn ochtendbrief en agenda).",
+      {
+        titel: { type: "string", description: "Wat er moet gebeuren." },
+        datum: { type: "string", description: "Datum als JJJJ-MM-DD." },
+        _ernst: { type: "string", description: "info, aandacht of actie." },
+        _uitleg: { type: "string", description: "Korte context." },
       },
       token,
     ),

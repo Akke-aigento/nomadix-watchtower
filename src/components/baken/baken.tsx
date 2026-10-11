@@ -219,6 +219,7 @@ function BakenExperience({ onClose }: { onClose: () => void }) {
   }, []);
   const [listening, setListening] = useState(false);
   const [proposal, setProposal] = useState<string | null>(null);
+  const [frame, setFrame] = useState<{ url: string; frameable: boolean } | null>(null);
   const [hint, setHint] = useState<string | null>(null);
   const idRef = useRef(1);
   const scroller = useRef<HTMLDivElement>(null);
@@ -373,6 +374,7 @@ function BakenExperience({ onClose }: { onClose: () => void }) {
             setMood(m === "speaking" ? "praat" : "luistert");
             gateMic(m === "speaking");
           },
+          openFrame: (url, frameable) => setFrame({ url, frameable }),
           openProposal: (ref) => {
             if (/^[0-9a-f-]{36}$/i.test(ref)) return setProposal(ref);
             void supabase
@@ -809,6 +811,54 @@ function BakenExperience({ onClose }: { onClose: () => void }) {
           </form>
         </div>
       </div>
+
+      {frame && (
+        <div className="absolute inset-x-0 bottom-0 z-20 flex h-[78%] flex-col overflow-hidden rounded-t-[28px] border-t border-white/10 bg-[#07111f] shadow-2xl">
+          <div className="flex items-center gap-2 px-4 py-2.5">
+            <span className="min-w-0 flex-1 truncate text-sm text-white/70">
+              {frame.url.replace(/^https:\/\//, "")}
+            </span>
+            <a
+              href={frame.url}
+              target="_blank"
+              rel="noreferrer"
+              className="rounded-full border border-white/10 bg-white/[0.06] px-3 py-1.5 text-xs font-semibold text-white/80"
+            >
+              Nieuw tabblad
+            </a>
+            <button
+              type="button"
+              onClick={() => setFrame(null)}
+              className="flex size-8 items-center justify-center rounded-full border border-white/10 bg-white/[0.06] text-white/80"
+              aria-label="Sluit de site"
+            >
+              <X className="size-4" />
+            </button>
+          </div>
+          {frame.frameable ? (
+            <iframe
+              src={frame.url}
+              title="Site"
+              className="w-full flex-1 bg-white"
+              sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
+            />
+          ) : (
+            <div className="flex flex-1 flex-col items-center justify-center gap-3 px-6 text-center text-white/70">
+              <p>Deze site laat zich niet in een kader tonen.</p>
+              <a
+                href={frame.url}
+                target="_blank"
+                rel="noreferrer"
+                className="rounded-full px-4 py-2 text-sm font-bold text-[#06202c]"
+                style={{ background: "linear-gradient(135deg,#2dd4bf,#22d3ee 55%,#38bdf8)" }}
+              >
+                Open in een nieuw tabblad
+              </a>
+              <p className="text-xs text-white/40">Op desktop loopt het gesprek gewoon door.</p>
+            </div>
+          )}
+        </div>
+      )}
 
       <ProposalSheet id={proposal} onOpenChange={setProposal} />
     </div>

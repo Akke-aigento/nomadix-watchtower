@@ -133,6 +133,81 @@ export const Route = createFileRoute("/api/baken-tool")({
           return ok({ onthouden: feit });
         }
 
+        if (tool === "maak_voorstel") {
+          const titel = String(body.titel ?? "")
+            .trim()
+            .slice(0, 140);
+          const probleem = String(body.probleem ?? "")
+            .trim()
+            .slice(0, 1500);
+          const aanpak = String(body.aanpak ?? "")
+            .trim()
+            .slice(0, 3000);
+          if (titel.length < 4 || aanpak.length < 10)
+            return fail("titel en aanpak zijn nodig (wat moet er concreet gebeuren?)");
+          const soort = String(body.soort ?? "improvement");
+          const category = ["bug", "security", "improvement"].includes(soort)
+            ? soort
+            : "improvement";
+          let targetId: string | null = null;
+          const site = String(body.site ?? "").trim();
+          if (site) {
+            const { data: t } = await supabaseAdmin
+              .from("watch_targets")
+              .select("id, name")
+              .ilike("name", `%${site.replace(/[%_]/g, " ")}%`)
+              .limit(1);
+            targetId = t?.[0]?.id ?? null;
+          }
+          const go = body.go === true || body.go === "true";
+          const { data, error } = await supabaseAdmin
+            .from("proposals")
+            .insert({
+              title: titel,
+              description: probleem || titel,
+              proposed_action: aanpak,
+              category,
+              source: "baken",
+              target_id: targetId,
+              fingerprint: `baken:${Date.now()}`,
+              status: go ? "approved" : "proposed",
+              decided_at: go ? new Date().toISOString() : null,
+            })
+            .select("id")
+            .single();
+          if (error) return fail(error.message);
+          return ok({
+            voorstel: titel,
+            id: data.id,
+            status: go ? "go gegeven" : "wacht op go",
+            uitleg: go
+              ? "De Watchtower-assistent pakt het binnen het uur op en stuurt Akke een melding als het klaar is (of als hij iets van hem nodig heeft)."
+              : "Staat bij Voorstellen met een go-knop.",
+          });
+        }
+
+        if (tool === "zet_in_agenda") {
+          const titel = String(body.titel ?? "")
+            .trim()
+            .slice(0, 140);
+          const datum = String(body.datum ?? "");
+          if (titel.length < 3 || !/^\d{4}-\d{2}-\d{2}$/.test(datum))
+            return fail("titel en datum (JJJJ-MM-DD) zijn nodig");
+          const ernst = ["info", "aandacht", "actie"].includes(String(body.ernst))
+            ? String(body.ernst)
+            : "info";
+          const { error } = await supabaseAdmin.from("agenda_items").insert({
+            fingerprint: `baken:${Date.now()}`,
+            title: titel,
+            description: String(body.uitleg ?? "").slice(0, 500) || null,
+            due_date: datum,
+            kind: "other",
+            severity: ernst,
+          });
+          if (error) return fail(error.message);
+          return ok({ gepland: titel, datum });
+        }
+
         if (tool === "vergeet") {
           const feit = String(body.feit ?? "").trim();
           const { data, error } = await supabaseAdmin
