@@ -41,6 +41,8 @@ async function handle(request: Request) {
     return Response.json({ ok: true, repos: s.r, usages: (s.u as unknown[]).length, result: data });
   } catch (e) {
     console.error("ingest-scan failed", e);
-    return Response.json({ error: e instanceof Error ? e.message : String(e) }, { status: 500 });
+    const msg =
+      e instanceof Error ? e.message : ((e as { message?: string })?.message ?? JSON.stringify(e));
+    return Response.json({ error: msg }, { status: 500 });
   }
 }
