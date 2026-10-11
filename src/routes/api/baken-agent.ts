@@ -347,7 +347,11 @@ function agentBody(
           }
         : {}),
       tts: {
-        model_id: process.env.BAKEN_AGENT_TTS_MODEL || "eleven_flash_v2_5",
+        // ElevenLabs eist voor Engelse agents een v2-stemmodel (geen v2_5).
+        model_id:
+          v.lang === "en"
+            ? "eleven_flash_v2"
+            : process.env.BAKEN_AGENT_TTS_MODEL || "eleven_flash_v2_5",
         voice_id: process.env.BAKEN_VOICE_ID || "JBFqnCBsd6RMkjVDRZzb",
       },
     },
