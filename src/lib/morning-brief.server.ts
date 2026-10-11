@@ -7,8 +7,9 @@
  */
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { sendAlertMail } from "@/lib/scan.server";
+import { SITE_URL } from "@/lib/site";
 
-const DASHBOARD_URL = "https://nomadix-watchtower.lovable.app";
+const DASHBOARD_URL = SITE_URL;
 const C = {
   bg: "#ECE9E3",
   card: "#FFFFFF",

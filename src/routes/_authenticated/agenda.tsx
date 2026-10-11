@@ -1,3 +1,4 @@
+import { SITE_URL } from "@/lib/site";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
@@ -128,9 +129,7 @@ function AgendaPage() {
     return m;
   }, [rows]);
 
-  const feedUrl = token.data
-    ? `${typeof window !== "undefined" ? window.location.origin : "https://nomadix-watchtower.lovable.app"}/api/public/agenda.ics?token=${token.data}`
-    : null;
+  const feedUrl = token.data ? `${SITE_URL}/api/public/agenda.ics?token=${token.data}` : null;
   const webcal = feedUrl?.replace(/^https?:/, "webcal:");
 
   // Raster: maandag als eerste dag, 6 weken.

@@ -1,3 +1,4 @@
+import { SITE_URL } from "@/lib/site";
 import { createFileRoute } from "@tanstack/react-router";
 
 /**
@@ -30,7 +31,7 @@ TAAL: Akke koos Engels. Praat en antwoord altijd in natuurlijk Engels (kort, war
 };
 const TOOL_NAME = "toon";
 
-const BASE_URL = process.env.WATCHTOWER_URL || "https://nomadix-watchtower.lovable.app";
+const BASE_URL = process.env.WATCHTOWER_URL || SITE_URL;
 
 /** Kandidaat-taalmodellen, sterkste eerst. Het eerste dat ElevenLabs aanvaardt, wordt gebruikt. */
 const LLMS = [

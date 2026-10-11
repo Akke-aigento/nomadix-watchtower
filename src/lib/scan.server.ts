@@ -30,10 +30,11 @@ import { checkName, decide, describe, isCheckDue, targetStatus, type Severity } 
 import { anyDelivered, pushToAll } from "@/lib/notify.server";
 import { closeProposalsFor, ensureProposal } from "@/lib/proposals.server";
 import { degradedPartners, refreshPartnerStatus, upstreamLine } from "@/lib/partners.server";
+import { SITE_URL } from "@/lib/site";
 
 export type { CheckOutcome, CheckStatus } from "@/lib/checks.server";
 
-const DASHBOARD_URL = "https://nomadix-watchtower.lovable.app";
+const DASHBOARD_URL = SITE_URL;
 
 export async function sendAlertMail(subject: string, html: string): Promise<boolean> {
   const key = process.env.RESEND_API_KEY;

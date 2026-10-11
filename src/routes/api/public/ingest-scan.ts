@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 
 /**
  * Integratiescan inlezen zonder SQL te plakken.
- *   node scripts/integration-scan.mjs --post https://nomadix-watchtower.lovable.app/api/public/ingest-scan <repo>=<pad>
+ *   node scripts/integration-scan.mjs --post https://watchtower.studioakke.com/api/public/ingest-scan <repo>=<pad>
  * Body = de compacte JSON van integration-scan.mjs ({ i, u, h, r }); roept public.wt_ingest_scan aan.
  * Beveiligd met x-cron-secret.
  */

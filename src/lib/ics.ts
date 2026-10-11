@@ -1,3 +1,4 @@
+import { SITE_URL } from "@/lib/site";
 /** iCalendar (RFC 5545) voor de Watchtower-agenda. Puur, zonder I/O. */
 
 export type AgendaRow = {
@@ -56,11 +57,20 @@ function nextDay(d: string): string {
 }
 
 function alarm(daysBefore: number, text: string): string[] {
-  return ["BEGIN:VALARM", "ACTION:DISPLAY", `DESCRIPTION:${esc(text)}`, `TRIGGER:-P${daysBefore}D`, "END:VALARM"];
+  return [
+    "BEGIN:VALARM",
+    "ACTION:DISPLAY",
+    `DESCRIPTION:${esc(text)}`,
+    `TRIGGER:-P${daysBefore}D`,
+    "END:VALARM",
+  ];
 }
 
 export function buildIcs(items: AgendaRow[], now = new Date()): string {
-  const stamp = now.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "");
+  const stamp = now
+    .toISOString()
+    .replace(/[-:]/g, "")
+    .replace(/\.\d{3}/, "");
   const lines = [
     "BEGIN:VCALENDAR",
     "VERSION:2.0",
@@ -75,7 +85,11 @@ export function buildIcs(items: AgendaRow[], now = new Date()): string {
   ];
   for (const it of items) {
     const title = `${KIND_PREFIX[it.kind] ?? "📌"} ${it.title}`;
-    const desc = [it.description ?? "", it.source_url ? `Bron: ${it.source_url}` : "", "Watchtower: https://nomadix-watchtower.lovable.app/agenda"]
+    const desc = [
+      it.description ?? "",
+      it.source_url ? `Bron: ${it.source_url}` : "",
+      `Watchtower: ${SITE_URL}/agenda`,
+    ]
       .filter(Boolean)
       .join("\n\n");
     lines.push(
