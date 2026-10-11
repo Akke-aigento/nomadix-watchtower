@@ -53,11 +53,13 @@ export const CATALOG = [
   { key: "webwinkelkeur", domains: ["webwinkelkeur.nl"], name: "WebwinkelKeur API", partner: "WebwinkelKeur", category: "reviews", hostRe: /webwinkelkeur\.nl/, names: /\bWebwinkelKeur\b/i },
   { key: "trustedshops", domains: ["trustedshops.com"], name: "Trusted Shops API", partner: "Trusted Shops", category: "reviews", hostRe: /trustedshops\.com/, names: /\bTrusted ?Shops\b/i },
   { key: "peppol", name: "Peppol e-facturatie", partner: "Peppol (via Odoo)", category: "compliance", hostRe: /peppol_(status|id|required|endpoint)/, names: /\bPeppol\b/i, docs: "https://financien.belgium.be/nl/ondernemingen/btw/e-facturatie" },
+  { key: "elevenlabs", domains: ["elevenlabs.io"], name: "ElevenLabs API (Baken-stem)", partner: "ElevenLabs", category: "ai", hostRe: /api\.elevenlabs\.io/, docs: "https://elevenlabs.io/docs", changelog: "https://elevenlabs.io/docs/changelog", names: /\bElevenLabs\b/i, pricing: "https://elevenlabs.io/pricing/api" },
+  { key: "certspotter", domains: ["sslmate.com", "certspotter.com"], name: "Cert Spotter API (SSLMate)", partner: "SSLMate", category: "infra", hostRe: /api\.certspotter\.com/, versionRe: /api\.certspotter\.com\/(v\d+)\//g, docs: "https://sslmate.com/help/reference/ct_search_api_v1", names: /\b(Cert ?Spotter|SSLMate)\b/i, pricing: "https://sslmate.com/certspotter/pricing" },
   { key: "migadu", domains: ["migadu.com"], name: "Migadu (IMAP/SMTP)", partner: "Migadu", category: "mail", hostRe: /migadu\.com/ },
 ];
 
 /** Hosts die geen koppeling zijn (docs, CDN's, voorbeeld-URL's, eigen domeinen). */
-const IGNORE_HOST = /(^|\.)(deno\.land|esm\.sh|jsr\.io|npmjs\.(com|org)|unpkg\.com|cdn\.jsdelivr\.net|cdnjs\.cloudflare\.com|github\.com|githubusercontent\.com|w3\.org|schema\.org|example\.(com|org)|localhost|sellqo\.app|lovable\.app|supabase\.co|fonts\.(googleapis|gstatic)\.com|googletagmanager\.com|google-analytics\.com|wikipedia\.org|x\.com|facebook\.com|instagram\.com|linkedin\.com|youtube\.com|tiktok\.com|placehold\.co|images\.unsplash\.com|unsplash\.com|docs\.[a-z.]+|developer\.[a-z.]+|developers\.[a-z.]+|shopify\.dev|peppol\.eu|qrserver\.com|sitemaps\.org|www\.google\.com)$/;
+const IGNORE_HOST = /(^|\.)(deno\.land|esm\.sh|jsr\.io|npmjs\.(com|org)|unpkg\.com|cdn\.jsdelivr\.net|cdnjs\.cloudflare\.com|github\.com|githubusercontent\.com|w3\.org|schema\.org|example\.(com|org)|localhost|sellqo\.app|lovable\.app|supabase\.co|fonts\.(googleapis|gstatic)\.com|googletagmanager\.com|google-analytics\.com|wikipedia\.org|x\.com|facebook\.com|instagram\.com|linkedin\.com|youtube\.com|tiktok\.com|placehold\.co|images\.unsplash\.com|unsplash\.com|docs\.[a-z.]+|developer\.[a-z.]+|developers\.[a-z.]+|shopify\.dev|peppol\.eu|qrserver\.com|sitemaps\.org|www\.google\.com|dns\.google|crt\.sh|data\.iana\.org)$/;
 
 const SERVER_CODE = /(^|\/)supabase\/functions\/|\.server\.[tj]s$|(^|\/)routes\/api\/|(^|\/)server\//;
 const SELF = /integration-scan\.mjs$/;
