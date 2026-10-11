@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { rowsWith } from "@/lib/rows";
 
 /**
  * Abonneerbare agenda (iPhone: Instellingen › Agenda › Accounts › Voeg toe › Andere › Agenda-abonnement).
@@ -21,13 +22,16 @@ export const Route = createFileRoute("/api/public/agenda.ics")({
           .order("due_date");
 
         const { buildIcs } = await import("@/lib/ics");
-        return new Response(buildIcs(items ?? []), {
-          headers: {
-            "content-type": "text/calendar; charset=utf-8",
-            "content-disposition": 'inline; filename="watchtower.ics"',
-            "cache-control": "no-store",
+        return new Response(
+          buildIcs(rowsWith(items, ["id", "title", "due_date", "kind", "severity"])),
+          {
+            headers: {
+              "content-type": "text/calendar; charset=utf-8",
+              "content-disposition": 'inline; filename="watchtower.ics"',
+              "cache-control": "no-store",
+            },
           },
-        });
+        );
       },
     },
   },

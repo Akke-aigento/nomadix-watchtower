@@ -8,6 +8,7 @@
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { sendAlertMail } from "@/lib/scan.server";
 import { SITE_URL } from "@/lib/site";
+import { rowsWith } from "@/lib/rows";
 
 const DASHBOARD_URL = SITE_URL;
 const C = {
@@ -257,7 +258,7 @@ export async function morningBrief(opts: { dryRun?: boolean; week?: boolean } = 
     .eq("status", "open")
     .lte("due_date", new Date(now.getTime() + 45 * 86400000).toISOString().slice(0, 10))
     .order("due_date");
-  const upcoming = (agendaRows ?? [])
+  const upcoming = rowsWith(agendaRows, ["title", "due_date"])
     .map((a) => ({ ...a, days: Math.round((Date.parse(a.due_date) - Date.parse(now.toISOString().slice(0, 10))) / 86400000) }))
     .filter((a) => a.severity !== "info" || a.days <= 14);
   if (upcoming.length) {

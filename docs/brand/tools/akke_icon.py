@@ -4,7 +4,7 @@ Elk product = dezelfde zeshoek met verloop (teal -> cyaan -> hemelsblauw),
 de uitsparing + stip rechtsboven, en een eigen kern in het midden.
 
 Gebruik:  python3 docs/brand/tools/akke_icon.py <kern> <uitvoermap>
-Kernen:   mail (ruit), watchtower (lens). Nieuwe tak = nieuwe kern in KERN.
+Kernen:   mail (ruit), watchtower (lens), insights (oplopende balkjes). Nieuwe tak = nieuwe kern in KERN.
 Vereist:  pip install cairosvg ; ImageMagick (convert) voor favicon.ico
 """
 import sys, subprocess, pathlib, cairosvg
@@ -17,6 +17,9 @@ KERN = {
     "mail": '<path d="M16 11.8 L21.5 16 L16 20.2 L10.5 16 Z" fill="url(#g)"/>',
     "watchtower": '<circle cx="16" cy="16" r="4.6" stroke="url(#g)" stroke-width="2" fill="none"/>'
                   '<circle cx="16" cy="16" r="1.9" fill="url(#g)"/>',
+    "insights": '<rect x="10.7" y="17.2" width="2.5" height="3.6" rx="1.1" fill="url(#g)"/>'
+                '<rect x="14.75" y="14.4" width="2.5" height="6.4" rx="1.1" fill="url(#g)"/>'
+                '<rect x="18.8" y="11.4" width="2.5" height="9.4" rx="1.1" fill="url(#g)"/>',
 }
 
 def mark(kern: str) -> str:
