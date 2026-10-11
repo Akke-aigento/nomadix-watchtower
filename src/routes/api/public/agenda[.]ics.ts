@@ -25,12 +25,13 @@ export const Route = createFileRoute("/api/public/agenda.ics")({
         return new Response(
           buildIcs(rowsWith(items, ["id", "title", "due_date", "kind", "severity"])),
           {
-          headers: {
-            "content-type": "text/calendar; charset=utf-8",
-            "content-disposition": 'inline; filename="watchtower.ics"',
-            "cache-control": "no-store",
+            headers: {
+              "content-type": "text/calendar; charset=utf-8",
+              "content-disposition": 'inline; filename="watchtower.ics"',
+              "cache-control": "no-store",
+            },
           },
-        });
+        );
       },
     },
   },
