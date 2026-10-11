@@ -11,7 +11,7 @@ import { ArrowUp, Mic, MicOff, Volume2, VolumeX, X } from "lucide-react";
 import { ask, capabilities, greet, type BakenReply, type Scene } from "./engine";
 import { startAgent, type AgentConversation } from "./agent";
 import { SceneView } from "./scenes";
-import { voice } from "./voice";
+import { setAudioSession, voice } from "./voice";
 import { ProposalSheet } from "@/components/proposal-detail";
 import { cn } from "@/lib/utils";
 
@@ -345,9 +345,9 @@ function BakenExperience({ onClose }: { onClose: () => void }) {
     });
     return () => {
       alive = false;
-      voice.stop();
-      void agent.current?.endSession();
+      const c = agent.current;
       agent.current = null;
+      void (c?.endSession() ?? Promise.resolve()).finally(() => voice.release());
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -638,6 +638,11 @@ function BakenExperience({ onClose }: { onClose: () => void }) {
 
 export function BakenProvider({ children }: { children: ReactNode }) {
   const [open, setOpen] = useState(false);
+  // Watchtower openen mag je muziek nooit onderbreken: enkel tijdens een gesprek claimt Baken audio.
+  useEffect(() => {
+    setAudioSession("ambient");
+    return () => voice.release();
+  }, []);
   useEffect(() => {
     if (!open) return;
     const prev = document.body.style.overflow;
@@ -662,7 +667,7 @@ export function BakenProvider({ children }: { children: ReactNode }) {
       {open && (
         <BakenExperience
           onClose={() => {
-            voice.stop();
+            voice.release();
             setOpen(false);
           }}
         />

@@ -68,6 +68,21 @@ async function toWav(blob: Blob, ctx: AudioContext): Promise<Blob> {
   return new Blob([buf], { type: "audio/wav" });
 }
 
+/**
+ * iOS/Safari: het audiosessietype bepaalt of we andere audio (Spotify, podcasts) onderbreken.
+ * Buiten een Baken-gesprek "ambient" (mengt, onderbreekt niks); tijdens een gesprek
+ * "play-and-record" (micro + stem). Browsers zonder deze API negeren het.
+ */
+type AudioSessionType = "auto" | "ambient" | "playback" | "play-and-record";
+export function setAudioSession(type: AudioSessionType) {
+  try {
+    const nav = navigator as unknown as { audioSession?: { type: AudioSessionType } };
+    if (nav.audioSession) nav.audioSession.type = type;
+  } catch {
+    /* niet ondersteund */
+  }
+}
+
 class Voice {
   private ctx: AudioContext | null = null;
   private audio: HTMLAudioElement | null = null;
@@ -83,6 +98,7 @@ class Voice {
   /** Moet binnen een tik (gebruikersgebaar) aangeroepen worden. */
   unlock() {
     if (typeof window === "undefined") return;
+    setAudioSession("play-and-record");
     try {
       const AC =
         window.AudioContext ??
@@ -121,6 +137,27 @@ class Voice {
     };
     cancelAnimationFrame(this.raf);
     tick();
+  }
+
+  /**
+   * Baken dicht: alles vrijgeven (audiocontext, audio-element, micro, stem) zodat iOS de
+   * audiosessie loslaat en je muziek gewoon verder speelt.
+   */
+  release() {
+    this.stop();
+    this.stream?.getTracks().forEach((t) => t.stop());
+    this.stream = null;
+    if (this.audio) {
+      this.audio.removeAttribute("src");
+      this.audio.load();
+      this.audio = null;
+    }
+    this.analyser = null;
+    this.wired = false;
+    const ctx = this.ctx;
+    this.ctx = null;
+    void ctx?.close().catch(() => {});
+    setAudioSession("ambient");
   }
 
   stop() {
