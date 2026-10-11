@@ -378,6 +378,10 @@ async function storefront(
 /**
  * Kan een klant kopen? Enkel leesacties (geen cart, geen order):
  * producten met prijs zichtbaar + minstens één verzendmethode naar BE.
+ * Ticketwinkels (alle zichtbare producten zijn tickets, bv. The Fonske Crawl)
+ * hebben geen verzending nodig; daar moet minstens één boekbare datum open
+ * staan. storefront-api geeft per ticket `next_event_date`: de eerste datum die
+ * niet voorbij is en niet geannuleerd/overgeslagen/samengevoegd.
  */
 export async function checkStore(tenantId: string, fetcher: Fetcher = fetch): Promise<CheckOutcome> {
   const started = Date.now();
@@ -400,19 +404,34 @@ export async function checkStore(tenantId: string, fetcher: Fetcher = fetch): Pr
         },
       };
     }
-    type P = { price?: number | null; price_range?: { min?: number | null } | null };
+    type P = {
+      price?: number | null;
+      price_range?: { min?: number | null } | null;
+      product_type?: string | null;
+      next_event_date?: string | null;
+    };
     const list = ((products.data as { products?: P[] })?.products ?? []) as P[];
     // Producten met varianten hebben price 0 en de echte prijs in price_range (bv. Astra Sleep).
     const withPrice = list.filter(
       (p) => (typeof p.price === "number" && p.price > 0) || (typeof p.price_range?.min === "number" && p.price_range.min > 0),
     ).length;
     const methods = Array.isArray(shipping.data) ? shipping.data.length : 0;
+    const tickets = list.filter((p) => p.product_type === "ticket");
+    const ticketOnly = list.length > 0 && tickets.length === list.length;
+    const nextEvent =
+      tickets
+        .map((p) => p.next_event_date)
+        .filter((d): d is string => typeof d === "string" && d.length > 0)
+        .sort()[0] ?? null;
     let status: CheckStatus = "ok";
     let issue: string | null = null;
     if (!list.length) {
       status = "fail";
       issue = "no_products";
-    } else if (!methods) {
+    } else if (ticketOnly && !nextEvent) {
+      status = "fail";
+      issue = "no_upcoming_events";
+    } else if (!ticketOnly && !methods) {
       status = "fail";
       issue = "no_shipping";
     } else if (!withPrice) {
@@ -423,7 +442,13 @@ export async function checkStore(tenantId: string, fetcher: Fetcher = fetch): Pr
       check_key: "store",
       status,
       latency_ms: latency,
-      detail: { products_visible: list.length, with_price: withPrice, shipping_methods: methods, issue },
+      detail: {
+        products_visible: list.length,
+        with_price: withPrice,
+        shipping_methods: methods,
+        ...(ticketOnly ? { ticket_shop: true, next_event_date: nextEvent } : {}),
+        issue,
+      },
     };
   } catch (e) {
     // Onze eigen fetch faalde (timeout naar Supabase): dat is SellQo zelf.

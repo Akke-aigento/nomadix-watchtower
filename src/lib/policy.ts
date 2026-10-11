@@ -176,6 +176,8 @@ export function statusLine(checkKey: string, status: CheckStatus, detail: unknow
     case "odoo":
       return `Versie ${d.serie ?? "?"} · oud /jsonrpc-adres werkt nog${d.json2_exists ? " · JSON-2 beschikbaar" : ""}`;
     case "store":
+      if (d.ticket_shop === true && typeof d.next_event_date === "string")
+        return `Volgende datum ${new Date(d.next_event_date + "T12:00:00").toLocaleDateString("nl-BE")} — tickets kopen kan`;
       return `${d.products_visible ?? "?"}+ producten zichtbaar, ${d.shipping_methods ?? "?"} verzendmethode(s) — afrekenen kan`;
     case "domain":
       return typeof d.expires_at === "string" ? `Geregistreerd tot ${new Date(d.expires_at).toLocaleDateString("nl-BE")}` : "Geregistreerd";
@@ -257,6 +259,8 @@ export function describe(
       if (typeof d.error === "string") return { title: "Winkel-API werkt niet", summary: `${d.error} — klanten zien geen producten of kunnen niet afrekenen` };
       if (d.issue === "no_products") return { title: "Geen producten zichtbaar in de winkel", summary: "de storefront geeft een lege productlijst" };
       if (d.issue === "no_shipping") return { title: "Geen verzendmethode naar België", summary: "klanten kunnen niet afrekenen" };
+      if (d.issue === "no_upcoming_events")
+        return { title: "Geen boekbare datum", summary: "er staat geen toekomstige datum open — bezoekers kunnen geen ticket kopen" };
       if (d.issue === "no_prices") return { title: "Producten zonder prijs", summary: "de eerste producten in de winkel hebben geen prijs" };
       return { title: "Winkel meldt een probleem", summary: "" };
     }

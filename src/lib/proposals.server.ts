@@ -120,7 +120,9 @@ async function draftFor(target: Target, o: CheckOutcome): Promise<Draft | null> 
           ? `de storefront-API faalt (${d.error})`
           : d.issue === "no_shipping"
             ? "er geen verzendmethode naar België is"
-            : d.issue === "no_products"
+            : d.issue === "no_upcoming_events"
+              ? "er geen toekomstige datum openstaat om tickets voor te kopen"
+              : d.issue === "no_products"
               ? "er geen producten zichtbaar zijn"
               : "producten geen prijs hebben";
       return {
@@ -133,6 +135,8 @@ async function draftFor(target: Target, o: CheckOutcome): Promise<Draft | null> 
             ? "Edge function storefront-api in SellQo nakijken (logs), bij een kapotte deploy de vorige versie herdeployen via de Lovable-agent (deploy-only opdracht, met STOP-clausule)."
             : d.issue === "no_shipping"
               ? "In SellQo-admin van deze tenant de verzendmethodes en verzendlanden nakijken (BE moet aan staan)."
+              : d.issue === "no_upcoming_events"
+                ? "In SellQo-admin → Events een nieuwe datum aanmaken (of een oud event dupliceren) en verlopen data op voltooid of geannuleerd zetten."
               : "In SellQo-admin van deze tenant nakijken of producten actief/gepubliceerd zijn en een prijs hebben.",
       };
     }
