@@ -7,7 +7,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { ArrowUp, Mic, MicOff, Volume2, VolumeX, X } from "lucide-react";
+import { ArrowUp, Ear, EarOff, Mic, MicOff, Volume2, VolumeX, X } from "lucide-react";
 import { ask, capabilities, greet, type BakenReply, type Scene } from "./engine";
 import {
   AgentCancelled,
@@ -165,6 +165,32 @@ function BakenExperience({ onClose }: { onClose: () => void }) {
   const [level, setLevel] = useState(0);
   const [input, setInput] = useState("");
   const [sound, setSound] = useState(true);
+  /**
+   * Onderbreken: aan = de micro blijft open terwijl Baken praat (je kan erdoor praten).
+   * Uit (standaard) = de micro gaat dicht zolang Baken praat en pas kort daarna weer open, zodat
+   * een Bluetooth-speaker of luide luidspreker zijn eigen stem niet als jouw beurt laat tellen.
+   */
+  const [interrupt, setInterrupt] = useState(() => {
+    try {
+      return localStorage.getItem("baken.onderbreken") === "1";
+    } catch {
+      return false;
+    }
+  });
+  const interruptRef = useRef(interrupt);
+  interruptRef.current = interrupt;
+  const unmuteTimer = useRef<number | null>(null);
+  const lastMode = useRef<"speaking" | "listening">("listening");
+  const gateMic = useCallback((speaking: boolean) => {
+    const c = agent.current;
+    if (!c) return;
+    if (unmuteTimer.current) window.clearTimeout(unmuteTimer.current);
+    unmuteTimer.current = null;
+    if (interruptRef.current) return c.setMicMuted(false);
+    if (speaking) c.setMicMuted(true);
+    // Bluetooth speelt een paar honderd ms achter: pas daarna weer luisteren.
+    else unmuteTimer.current = window.setTimeout(() => agent.current?.setMicMuted(false), 700);
+  }, []);
   const [listening, setListening] = useState(false);
   const [proposal, setProposal] = useState<string | null>(null);
   const [hint, setHint] = useState<string | null>(null);
@@ -304,7 +330,11 @@ function BakenExperience({ onClose }: { onClose: () => void }) {
               setHint("Gesprek gestopt · tik op het baken om verder te praten");
             }
           },
-          mode: (m) => setMood(m === "speaking" ? "praat" : "luistert"),
+          mode: (m) => {
+            lastMode.current = m;
+            setMood(m === "speaking" ? "praat" : "luistert");
+            gateMic(m === "speaking");
+          },
           openProposal: (ref) => {
             if (/^[0-9a-f-]{36}$/i.test(ref)) return setProposal(ref);
             void supabase
@@ -352,6 +382,8 @@ function BakenExperience({ onClose }: { onClose: () => void }) {
         if (!c) throw new Error("geen agent");
         if (agent.current === c) return; // dubbele tik: hetzelfde gesprek, niets nieuws
         agent.current = c;
+        // De begroeting kan al lopen voor we de sessie in handen hebben: micro meteen juist zetten.
+        gateMic(lastMode.current === "speaking");
         setAgentOn(true);
         if (!soundRef.current) c.setVolume({ volume: 0 });
       } catch (e) {
@@ -367,7 +399,7 @@ function BakenExperience({ onClose }: { onClose: () => void }) {
         }
       }
     },
-    [addTurn, greetClassic, say, onClose],
+    [addTurn, greetClassic, say, onClose, gateMic],
   );
 
   // Openen: met agent → meteen een echt gesprek (hij groet zelf); anders de oude flow.
@@ -518,6 +550,33 @@ function BakenExperience({ onClose }: { onClose: () => void }) {
         <button
           type="button"
           onClick={() => {
+            const next = !interrupt;
+            setInterrupt(next);
+            interruptRef.current = next;
+            try {
+              localStorage.setItem("baken.onderbreken", next ? "1" : "0");
+            } catch {
+              /* niet bewaard, enkel voor nu */
+            }
+            gateMic(mood === "praat");
+            setHint(
+              next
+                ? "Onderbreken aan · gebruik dit met oortjes"
+                : "Onderbreken uit · ik luister als ik uitgesproken ben",
+            );
+          }}
+          className={cn(
+            "flex size-10 items-center justify-center rounded-full border border-white/10 text-white/80",
+            interrupt ? "bg-white/[0.14]" : "bg-white/[0.06]",
+          )}
+          aria-label={interrupt ? "Onderbreken uitzetten" : "Onderbreken aanzetten"}
+          title={interrupt ? "Onderbreken aan (oortjes)" : "Onderbreken uit (speaker)"}
+        >
+          {interrupt ? <Ear className="size-[18px]" /> : <EarOff className="size-[18px]" />}
+        </button>
+        <button
+          type="button"
+          onClick={() => {
             if (sound) voice.stop();
             agent.current?.setVolume({ volume: sound ? 0 : 1 });
             setSound((s) => !s);
@@ -556,7 +615,9 @@ function BakenExperience({ onClose }: { onClose: () => void }) {
               <div className="mt-0.5 text-[12px] text-white/40">
                 {hint ??
                   (agentOn
-                    ? "Gewoon praten · onderbreken mag · tik om te stoppen"
+                    ? interrupt
+                      ? "Gewoon praten · onderbreken mag · zeg 'stop' om te stoppen"
+                      : "Gewoon praten · ik luister als ik uitgesproken ben · zeg 'stop' om te stoppen"
                     : mood === "praat"
                       ? "Tik om te onderbreken"
                       : convoOn
