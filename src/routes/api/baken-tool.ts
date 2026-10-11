@@ -94,7 +94,7 @@ export const Route = createFileRoute("/api/baken-tool")({
             status,
             uitleg:
               status === "approved"
-                ? "Go gegeven. De Watchtower-assistent voert het uit bij zijn volgende ronde (rond 8u, 13u of 19u)."
+                ? "Go gegeven. De Watchtower-assistent voert het binnen het uur uit (tussen 8u en 22u) en meldt het resultaat aan Akke."
                 : "Afgewezen.",
           });
         }

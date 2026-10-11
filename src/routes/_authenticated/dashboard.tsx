@@ -89,7 +89,7 @@ function DashboardPage() {
       queryClient.invalidateQueries({ queryKey: ["proposals"] });
       toast.success(
         vars.status === "approved"
-          ? "Go gegeven — Claude pakt dit op bij de volgende ronde (rond 8u, 13u of 19u)"
+          ? "Go gegeven — Watchtower voert dit binnen het uur uit (tussen 8u en 22u) en meldt het resultaat"
           : "Afgewezen",
       );
     },

@@ -143,7 +143,7 @@ export function ProposalSheet({
       queryClient.invalidateQueries({ queryKey: ["nav_badges"] });
       toast.success(
         v.status === "approved"
-          ? "Go gegeven — Watchtower pakt dit op bij de volgende ronde (rond 8u, 13u of 19u)"
+          ? "Go gegeven — Watchtower voert dit binnen het uur uit (tussen 8u en 22u) en meldt het resultaat"
           : v.status === "rejected"
             ? "Afgewezen"
             : "Bijgewerkt",
