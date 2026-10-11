@@ -31,6 +31,7 @@ import { Route as AuthenticatedTargetsNewRouteImport } from './routes/_authentic
 import { Route as ApiPublicAgendaDoticsRouteImport } from './routes/api/public/agenda[.]ics'
 import { Route as ApiPublicCheckRouteImport } from './routes/api/public/check'
 import { Route as ApiPublicDailyRollupRouteImport } from './routes/api/public/daily-rollup'
+import { Route as ApiPublicIngestScanRouteImport } from './routes/api/public/ingest-scan'
 import { Route as ApiPublicMorningBriefRouteImport } from './routes/api/public/morning-brief'
 import { Route as ApiPublicNotifyRouteImport } from './routes/api/public/notify'
 import { Route as ApiPublicRunScansRouteImport } from './routes/api/public/run-scans'
@@ -146,6 +147,11 @@ const ApiPublicDailyRollupRoute = ApiPublicDailyRollupRouteImport.update({
   path: '/api/public/daily-rollup',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicIngestScanRoute = ApiPublicIngestScanRouteImport.update({
+  id: '/api/public/ingest-scan',
+  path: '/api/public/ingest-scan',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicMorningBriefRoute = ApiPublicMorningBriefRouteImport.update({
   id: '/api/public/morning-brief',
   path: '/api/public/morning-brief',
@@ -189,6 +195,7 @@ export interface FileRoutesByFullPath {
   '/api/public/agenda.ics': typeof ApiPublicAgendaDoticsRoute
   '/api/public/check': typeof ApiPublicCheckRoute
   '/api/public/daily-rollup': typeof ApiPublicDailyRollupRoute
+  '/api/public/ingest-scan': typeof ApiPublicIngestScanRoute
   '/api/public/morning-brief': typeof ApiPublicMorningBriefRoute
   '/api/public/notify': typeof ApiPublicNotifyRoute
   '/api/public/run-scans': typeof ApiPublicRunScansRoute
@@ -216,6 +223,7 @@ export interface FileRoutesByTo {
   '/api/public/agenda.ics': typeof ApiPublicAgendaDoticsRoute
   '/api/public/check': typeof ApiPublicCheckRoute
   '/api/public/daily-rollup': typeof ApiPublicDailyRollupRoute
+  '/api/public/ingest-scan': typeof ApiPublicIngestScanRoute
   '/api/public/morning-brief': typeof ApiPublicMorningBriefRoute
   '/api/public/notify': typeof ApiPublicNotifyRoute
   '/api/public/run-scans': typeof ApiPublicRunScansRoute
@@ -245,6 +253,7 @@ export interface FileRoutesById {
   '/api/public/agenda.ics': typeof ApiPublicAgendaDoticsRoute
   '/api/public/check': typeof ApiPublicCheckRoute
   '/api/public/daily-rollup': typeof ApiPublicDailyRollupRoute
+  '/api/public/ingest-scan': typeof ApiPublicIngestScanRoute
   '/api/public/morning-brief': typeof ApiPublicMorningBriefRoute
   '/api/public/notify': typeof ApiPublicNotifyRoute
   '/api/public/run-scans': typeof ApiPublicRunScansRoute
@@ -274,6 +283,7 @@ export interface FileRouteTypes {
     | '/api/public/agenda.ics'
     | '/api/public/check'
     | '/api/public/daily-rollup'
+    | '/api/public/ingest-scan'
     | '/api/public/morning-brief'
     | '/api/public/notify'
     | '/api/public/run-scans'
@@ -301,6 +311,7 @@ export interface FileRouteTypes {
     | '/api/public/agenda.ics'
     | '/api/public/check'
     | '/api/public/daily-rollup'
+    | '/api/public/ingest-scan'
     | '/api/public/morning-brief'
     | '/api/public/notify'
     | '/api/public/run-scans'
@@ -329,6 +340,7 @@ export interface FileRouteTypes {
     | '/api/public/agenda.ics'
     | '/api/public/check'
     | '/api/public/daily-rollup'
+    | '/api/public/ingest-scan'
     | '/api/public/morning-brief'
     | '/api/public/notify'
     | '/api/public/run-scans'
@@ -348,6 +360,7 @@ export interface RootRouteChildren {
   ApiPublicAgendaDoticsRoute: typeof ApiPublicAgendaDoticsRoute
   ApiPublicCheckRoute: typeof ApiPublicCheckRoute
   ApiPublicDailyRollupRoute: typeof ApiPublicDailyRollupRoute
+  ApiPublicIngestScanRoute: typeof ApiPublicIngestScanRoute
   ApiPublicMorningBriefRoute: typeof ApiPublicMorningBriefRoute
   ApiPublicNotifyRoute: typeof ApiPublicNotifyRoute
   ApiPublicRunScansRoute: typeof ApiPublicRunScansRoute
@@ -510,6 +523,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicDailyRollupRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/ingest-scan': {
+      id: '/api/public/ingest-scan'
+      path: '/api/public/ingest-scan'
+      fullPath: '/api/public/ingest-scan'
+      preLoaderRoute: typeof ApiPublicIngestScanRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/morning-brief': {
       id: '/api/public/morning-brief'
       path: '/api/public/morning-brief'
@@ -583,6 +603,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicAgendaDoticsRoute: ApiPublicAgendaDoticsRoute,
   ApiPublicCheckRoute: ApiPublicCheckRoute,
   ApiPublicDailyRollupRoute: ApiPublicDailyRollupRoute,
+  ApiPublicIngestScanRoute: ApiPublicIngestScanRoute,
   ApiPublicMorningBriefRoute: ApiPublicMorningBriefRoute,
   ApiPublicNotifyRoute: ApiPublicNotifyRoute,
   ApiPublicRunScansRoute: ApiPublicRunScansRoute,

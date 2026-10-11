@@ -16,7 +16,11 @@ export const Route = createFileRoute("/api/public/morning-brief")({
 
 function brusselsHour(d = new Date()): number {
   return Number(
-    new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/Brussels", hour: "2-digit", hour12: false }).format(d),
+    new Intl.DateTimeFormat("en-GB", {
+      timeZone: "Europe/Brussels",
+      hour: "2-digit",
+      hour12: false,
+    }).format(d),
   );
 }
 
@@ -35,11 +39,43 @@ async function handle(request: Request) {
   try {
     const { morningBrief } = await import("@/lib/morning-brief.server");
     const result = await morningBrief({ dryRun, week: params.get("week") === "1" });
+    if (!dryRun)
+      await logBrief({
+        sent: result.sent,
+        forced: force,
+        subject: result.subject,
+        error: result.sent ? null : "mail niet verstuurd (Resend)",
+      });
     if (result.sent) await pingHeartbeat();
     return Response.json(result);
   } catch (e) {
     console.error("morning-brief failed", e);
+    if (!dryRun)
+      await logBrief({
+        sent: false,
+        forced: force,
+        subject: null,
+        error: e instanceof Error ? e.message : String(e),
+      });
     return Response.json({ error: e instanceof Error ? e.message : String(e) }, { status: 500 });
+  }
+}
+
+/** Eén rij per echte verzendpoging in brief_log; de bewaker leest dit (net._http_response bewaart maar ~6 u). */
+async function logBrief(row: {
+  sent: boolean;
+  forced: boolean;
+  subject: string | null;
+  error: string | null;
+}) {
+  try {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { error } = await supabaseAdmin
+      .from("brief_log" as never)
+      .insert({ ...row, channel: "mail" } as never);
+    if (error) throw error;
+  } catch (e) {
+    console.error("brief_log insert failed", e);
   }
 }
 

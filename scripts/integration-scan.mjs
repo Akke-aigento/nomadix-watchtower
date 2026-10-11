@@ -3,6 +3,8 @@
  * Integratie-scanner — Watchtower ontdekt zelf met welke partners de code praat.
  *
  *   node scripts/integration-scan.mjs <repo-naam>=<pad> [<repo-naam>=<pad> ...] > scan.json
+ *   WT_CRON_SECRET=… node scripts/integration-scan.mjs --post <url> <repo>=<pad>
+ *     → POST de compacte scan naar /api/public/ingest-scan (secret enkel uit env, nooit in code)
  *
  * Output (JSON): { scanned_at, integrations: [...], usages: [...], unknown_hosts: [...] }
  *  - integrations : bekende partners uit de catalogus die in de code voorkomen, met gevonden versies
@@ -249,13 +251,29 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   const args = process.argv.slice(2);
   const sqlMode = args.includes("--sql");
   const compactMode = args.includes("--compact");
-  const repos = args.filter((a) => a.includes("=")).map((a) => a.split("="));
+  const postIdx = args.indexOf("--post");
+  const postUrl = postIdx >= 0 ? args[postIdx + 1] : null;
+  const repos = args.filter((a, i) => (postIdx < 0 || i !== postIdx + 1) && a.includes("=")).map((a) => a.split("="));
   if (!repos.length) {
-    console.error("gebruik: node scripts/integration-scan.mjs [--sql] <repo>=<pad> ...");
+    console.error("gebruik: node scripts/integration-scan.mjs [--sql|--compact|--post <url>] <repo>=<pad> ...");
     process.exit(1);
   }
   const result = scan(repos);
-  if (compactMode) {
+  if (postIdx >= 0) {
+    const secret = process.env.WT_CRON_SECRET;
+    if (!postUrl || !secret) {
+      console.error("--post vraagt een url én WT_CRON_SECRET in de omgeving");
+      process.exit(1);
+    }
+    const res = await fetch(postUrl, {
+      method: "POST",
+      headers: { "content-type": "application/json", "x-cron-secret": secret },
+      body: JSON.stringify(toCompact(result)),
+    });
+    const out = await res.text();
+    process.stdout.write(out + "\n");
+    if (!res.ok) process.exit(1);
+  } else if (compactMode) {
     const json = JSON.stringify(toCompact(result)).replace(/'/g, "''");
     process.stdout.write(`select public.wt_ingest_scan('${json}'::jsonb);`);
   } else process.stdout.write(sqlMode ? toSql(result) : JSON.stringify(result, null, 2));
