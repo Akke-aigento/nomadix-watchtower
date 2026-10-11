@@ -10,6 +10,24 @@ import { createFileRoute } from "@tanstack/react-router";
  */
 const API = "https://api.elevenlabs.io/v1";
 const AGENT_NAME = "Watchtower Baken";
+
+/**
+ * Varianten van Baken. Nederlands draait in een A/B-test tussen twee ElevenLabs-
+ * spraakherkenners (per gesprek willekeurig gekozen), zodat de transcripties tonen welke
+ * Akke het best verstaat. Engels is een eigen agent (taalknop in de app).
+ */
+type Variant = { id: "nl" | "nl_b" | "en"; name: string; lang: "nl" | "en"; asr: string };
+const VARIANTS: Record<Variant["id"], Variant> = {
+  nl: { id: "nl", name: AGENT_NAME, lang: "nl", asr: "scribe_realtime" },
+  nl_b: { id: "nl_b", name: "Watchtower Baken B", lang: "nl", asr: "scribe_v2_turbo" },
+  en: { id: "en", name: "Watchtower Baken EN", lang: "en", asr: "scribe_realtime" },
+};
+const LANG_LINE: Record<Variant["lang"], string> = {
+  nl: "",
+  en: `
+
+TAAL: Akke koos Engels. Praat en antwoord altijd in natuurlijk Engels (kort, warm, zoals een maat), ook als hij een Nederlands woord gebruikt. Namen van sites en partners blijven zoals ze zijn.`,
+};
 const TOOL_NAME = "toon";
 
 const BASE_URL = process.env.WATCHTOWER_URL || "https://nomadix-watchtower.lovable.app";
@@ -283,15 +301,21 @@ const KEYWORDS = [
   "maatje",
 ];
 
-function agentBody(toolIds: string[], llm: string, schema: string, siteNames: string[] | null) {
+function agentBody(
+  v: Variant,
+  toolIds: string[],
+  llm: string,
+  schema: string,
+  siteNames: string[] | null,
+) {
   return {
-    name: AGENT_NAME,
+    name: v.name,
     conversation_config: {
       agent: {
         first_message: "{{begroeting}}",
-        language: "nl",
+        language: v.lang,
         prompt: {
-          prompt: PROMPT(schema),
+          prompt: PROMPT(schema) + LANG_LINE[v.lang],
           llm,
           temperature: 0.3,
           tool_ids: toolIds,
@@ -301,6 +325,7 @@ function agentBody(toolIds: string[], llm: string, schema: string, siteNames: st
         ? {
             asr: {
               quality: "high",
+              provider: v.asr,
               keywords: [...new Set([...KEYWORDS, ...siteNames])].slice(0, 100),
             },
             turn: {
@@ -367,9 +392,21 @@ async function upsertTool(
 }
 
 // Per worker-instantie: één keer opzoeken/bijwerken, daarna enkel nog tokens halen.
-let ready: Promise<{ agentId: string; llm: string; level: string }> | null = null;
+type Ready = { agentId: string; llm: string; level: string; variant: Variant["id"] };
+const ready = new Map<Variant["id"], Promise<Ready>>();
+function readyFor(key: string, v: Variant): Promise<Ready> {
+  let p = ready.get(v.id);
+  if (!p) {
+    p = ensureAgent(key, v).catch((e) => {
+      ready.delete(v.id); // volgende keer opnieuw proberen
+      throw e;
+    });
+    ready.set(v.id, p);
+  }
+  return p;
+}
 
-async function ensureAgent(key: string): Promise<{ agentId: string; llm: string; level: string }> {
+async function ensureAgent(key: string, v: Variant): Promise<Ready> {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   const { data: token } = await supabaseAdmin.rpc("get_baken_tool_token");
   if (typeof token !== "string" || !token) throw new Error("geen baken_tool_token");
@@ -392,12 +429,12 @@ async function ensureAgent(key: string): Promise<{ agentId: string; llm: string;
   // 2. agent (vaste id via env, anders op naam), met het sterkste model dat ElevenLabs aanvaardt
   const schema = await readSchema();
   const siteNames = await readSiteNames();
-  let agentId = process.env.BAKEN_AGENT_ID;
+  let agentId = v.id === "nl" ? process.env.BAKEN_AGENT_ID : undefined;
   if (!agentId) {
     const list = ((
-      await el(key, `/convai/agents?search=${encodeURIComponent(AGENT_NAME)}&page_size=20`)
+      await el(key, `/convai/agents?search=${encodeURIComponent(v.name)}&page_size=20`)
     ).agents ?? []) as { agent_id: string; name: string }[];
-    agentId = list.find((a) => a.name === AGENT_NAME)?.agent_id;
+    agentId = list.find((a) => a.name === v.name)?.agent_id;
   }
   let lastError: unknown = null;
   // Eerst alles (beter verstaan + vulwoorden); weigert ElevenLabs een van die instellingen,
@@ -405,14 +442,14 @@ async function ensureAgent(key: string): Promise<{ agentId: string; llm: string;
   const extras: Array<"vol" | "basis"> = ["vol", "basis"];
   for (const llm of LLMS) {
     for (const level of extras) {
-      const body = agentBody(toolIds, llm, schema, level === "vol" ? siteNames : null);
+      const body = agentBody(v, toolIds, llm, schema, level === "vol" ? siteNames : null);
       try {
         if (agentId) {
           await el(key, `/convai/agents/${agentId}`, { method: "PATCH", body });
-          return { agentId, llm, level };
+          return { agentId, llm, level, variant: v.id };
         }
         const created = await el(key, "/convai/agents/create", { method: "POST", body });
-        return { agentId: String(created.agent_id), llm, level };
+        return { agentId: String(created.agent_id), llm, level, variant: v.id };
       } catch (e) {
         lastError = e;
         // Enkel bij een geweigerde instelling of model verder proberen; andere fouten meteen melden.
@@ -457,16 +494,23 @@ export const Route = createFileRoute("/api/baken-agent")({
           Math.max(1, Number(new URL(request.url).searchParams.get("diag")) || 3),
         );
         try {
-          ready ??= ensureAgent(key);
-          const { agentId } = await ready;
-          const list = ((await el(key, `/convai/conversations?agent_id=${agentId}&page_size=${n}`))
-            .conversations ?? []) as { conversation_id: string }[];
+          const all: { conversation_id: string; start_time_unix_secs?: number; variant: string }[] =
+            [];
+          for (const v of Object.values(VARIANTS)) {
+            const { agentId } = await readyFor(key, v);
+            const list = ((
+              await el(key, `/convai/conversations?agent_id=${agentId}&page_size=${n}`)
+            ).conversations ?? []) as { conversation_id: string; start_time_unix_secs?: number }[];
+            all.push(...list.map((c) => ({ ...c, variant: `${v.id} (${v.asr})` })));
+          }
+          all.sort((a, b) => (b.start_time_unix_secs ?? 0) - (a.start_time_unix_secs ?? 0));
           const out = [];
-          for (const c of list.slice(0, n)) {
+          for (const c of all.slice(0, n)) {
             const d = await el(key, `/convai/conversations/${c.conversation_id}`);
             const tr = (d.transcript ?? []) as Array<Record<string, unknown>>;
             out.push({
               id: c.conversation_id,
+              variant: c.variant,
               start: (d.metadata as Json | undefined)?.start_time_unix_secs,
               duur: (d.metadata as Json | undefined)?.call_duration_secs,
               einde: (d.metadata as Json | undefined)?.termination_reason,
@@ -502,20 +546,42 @@ export const Route = createFileRoute("/api/baken-agent")({
         if (!key) return Response.json({ error: "geen ElevenLabs-sleutel" }, { status: 501 });
         try {
           // Zelftest met ?force=1: agent opnieuw opbouwen (na een prompt- of toolwijziging).
-          if (ok && new URL(request.url).searchParams.get("force") === "1") ready = null;
-          ready ??= ensureAgent(key);
-          const { agentId, llm, level } = await ready.catch((e) => {
-            ready = null; // volgende keer opnieuw proberen
-            throw e;
-          });
+          if (ok) {
+            // Zelftest (cron-secret): alle varianten (opnieuw) opbouwen, geen token teruggeven.
+            if (new URL(request.url).searchParams.get("force") === "1") ready.clear();
+            const res = [];
+            for (const v of Object.values(VARIANTS)) {
+              try {
+                const r = await readyFor(key, v);
+                res.push({ variant: v.id, asr: v.asr, llm: r.llm, level: r.level });
+              } catch (e) {
+                res.push({ variant: v.id, asr: v.asr, error: String(e).slice(0, 300) });
+              }
+            }
+            return Response.json({ ready: true, agent: true, varianten: res });
+          }
+          let taal = "nl";
+          try {
+            taal = String(((await request.json()) as { taal?: string }).taal ?? "nl");
+          } catch {
+            /* geen body: Nederlands */
+          }
+          // Nederlands: per gesprek willekeurig A of B; valt B uit, dan gewoon A.
+          let v: Variant =
+            taal === "en" ? VARIANTS.en : Math.random() < 0.5 ? VARIANTS.nl : VARIANTS.nl_b;
+          let r: Ready;
+          try {
+            r = await readyFor(key, v);
+          } catch (e) {
+            if (v.id !== "nl_b") throw e;
+            v = VARIANTS.nl;
+            r = await readyFor(key, v);
+          }
           const tok = await el(
             key,
-            `/convai/conversation/token?agent_id=${encodeURIComponent(agentId)}`,
+            `/convai/conversation/token?agent_id=${encodeURIComponent(r.agentId)}`,
           );
-          // Zelftest (cron-secret): geen token teruggeven, enkel bevestigen dat alles klaarstaat.
-          if (ok)
-            return Response.json({ ready: true, agent: true, llm, level, token: !!tok.token });
-          return Response.json({ token: tok.token, geheugen: await memoryLine() });
+          return Response.json({ token: tok.token, geheugen: await memoryLine(), variant: v.id });
         } catch (e) {
           console.error("baken-agent", e);
           return Response.json(

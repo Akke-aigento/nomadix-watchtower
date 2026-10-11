@@ -84,6 +84,23 @@ export function stopAgent(): Promise<void> {
  * gooit AgentCancelled als het gesprek intussen gestopt werd. Een tweede aanroep terwijl er al
  * één verbindt of loopt, start niets nieuws.
  */
+/** Taal van Baken (taalknop in de app), bewaard op dit toestel. */
+export type BakenLang = "nl" | "en";
+export function getLang(): BakenLang {
+  try {
+    return localStorage.getItem("baken.taal") === "en" ? "en" : "nl";
+  } catch {
+    return "nl";
+  }
+}
+export function setLang(l: BakenLang) {
+  try {
+    localStorage.setItem("baken.taal", l);
+  } catch {
+    /* enkel voor nu */
+  }
+}
+
 export function startAgent(on: AgentEvents): Promise<AgentConversation | null> {
   if (current) return Promise.resolve(current);
   if (starting) return starting;
@@ -93,8 +110,12 @@ export function startAgent(on: AgentEvents): Promise<AgentConversation | null> {
     on.status("verbinden");
     const [lib, tokenRes, opening] = await Promise.all([
       loadAgentSdk(),
-      fetch("/api/baken-agent", { method: "POST", headers: await authHeader() }),
-      agentOpening(),
+      fetch("/api/baken-agent", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...(await authHeader()) },
+        body: JSON.stringify({ taal: getLang() }),
+      }),
+      agentOpening(getLang()),
     ]);
     if (!live()) throw new AgentCancelled();
     if (!tokenRes.ok) {

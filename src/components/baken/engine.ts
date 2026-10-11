@@ -603,15 +603,28 @@ function shortStand(d: TodayData): string {
   return "Alles rustig.";
 }
 
+function shortStandEn(d: TodayData): string {
+  const n = d.targets.filter((t) => t.level === "actie" || t.level === "aandacht").length;
+  if (d.level === "actie") return n === 1 ? "One site needs action." : `${n} sites need action.`;
+  if (d.level === "aandacht")
+    return n === 1 ? "One site needs attention." : `${n} sites need attention.`;
+  return "All quiet.";
+}
+
 /** Begroeting + stand bij het openen, lokaal berekend (0 credits, geen wachttijd voor het model). */
-export async function agentOpening(): Promise<{ begroeting: string; stand: string; scene: Scene }> {
+export async function agentOpening(
+  lang: "nl" | "en" = "nl",
+): Promise<{ begroeting: string; stand: string; scene: Scene }> {
   const d = await loadToday();
   const r = sayToday(d);
   const h = new Date().getHours();
   const dag = h < 12 ? "Goeiemorgen" : h < 18 ? "Dag" : "Goeienavond";
   return {
     // Kort: hoe sneller hij zwijgt, hoe sneller jij kan praten. De details staan op het scherm.
-    begroeting: `${dag} Akke. ${shortStand(d)} Zeg het maar.`,
+    begroeting:
+      lang === "en"
+        ? `Hey Akke. ${shortStandEn(d)} What's up?`
+        : `${dag} Akke. ${shortStand(d)} Zeg het maar.`,
     stand: JSON.stringify(facts([{ kind: "vandaag", data: d }])[0]),
     scene: { kind: "vandaag", data: d },
   };

@@ -12,6 +12,9 @@ import { ask, capabilities, greet, type BakenReply, type Scene } from "./engine"
 import {
   AgentCancelled,
   agentBusy,
+  getLang,
+  setLang,
+  type BakenLang,
   onAppHidden,
   startAgent,
   stopAgent,
@@ -188,6 +191,7 @@ function BakenExperience({ onClose }: { onClose: () => void }) {
    * Uit = de micro gaat dicht zolang Baken praat en pas kort daarna weer open, zodat
    * een Bluetooth-speaker of luide luidspreker zijn eigen stem niet als jouw beurt laat tellen.
    */
+  const [lang, setLangState] = useState<BakenLang>(() => getLang());
   const [interrupt, setInterrupt] = useState(() => {
     try {
       // Standaard aan: de telefoon filtert zijn eigen stem zelf weg, en een dichte micro kapte
@@ -618,6 +622,28 @@ function BakenExperience({ onClose }: { onClose: () => void }) {
           title={interrupt ? "Onderbreken aan (oortjes)" : "Onderbreken uit (speaker)"}
         >
           {interrupt ? <Ear className="size-[18px]" /> : <EarOff className="size-[18px]" />}
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            const next: BakenLang = lang === "nl" ? "en" : "nl";
+            setLang(next);
+            setLangState(next);
+            // Loopt er een gesprek: meteen opnieuw starten in de andere taal.
+            if (agent.current || agentBusy()) {
+              void stopAgent().then(() => {
+                agent.current = null;
+                setAgentOn(false);
+                void connectAgent(false);
+              });
+            }
+            setHint(next === "en" ? "Baken talks English now" : "Baken praat terug Nederlands");
+          }}
+          className="text-tech flex size-10 items-center justify-center rounded-full border border-white/10 bg-white/[0.06] text-xs font-bold text-white/80"
+          aria-label={lang === "nl" ? "Schakel naar Engels" : "Schakel naar Nederlands"}
+          title="Taal van Baken"
+        >
+          {lang.toUpperCase()}
         </button>
         <button
           type="button"
