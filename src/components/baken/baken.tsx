@@ -185,14 +185,16 @@ function BakenExperience({ onClose }: { onClose: () => void }) {
   const [sound, setSound] = useState(true);
   /**
    * Onderbreken: aan = de micro blijft open terwijl Baken praat (je kan erdoor praten).
-   * Uit (standaard) = de micro gaat dicht zolang Baken praat en pas kort daarna weer open, zodat
+   * Uit = de micro gaat dicht zolang Baken praat en pas kort daarna weer open, zodat
    * een Bluetooth-speaker of luide luidspreker zijn eigen stem niet als jouw beurt laat tellen.
    */
   const [interrupt, setInterrupt] = useState(() => {
     try {
-      return localStorage.getItem("baken.onderbreken") === "1";
+      // Standaard aan: de telefoon filtert zijn eigen stem zelf weg, en een dichte micro kapte
+      // het begin van Akke's zinnen af. Enkel bij een Bluetooth-speaker zet je het oor uit.
+      return localStorage.getItem("baken.onderbreken2") !== "0";
     } catch {
-      return false;
+      return true;
     }
   });
   const interruptRef = useRef(interrupt);
@@ -597,7 +599,7 @@ function BakenExperience({ onClose }: { onClose: () => void }) {
             setInterrupt(next);
             interruptRef.current = next;
             try {
-              localStorage.setItem("baken.onderbreken", next ? "1" : "0");
+              localStorage.setItem("baken.onderbreken2", next ? "1" : "0");
             } catch {
               /* niet bewaard, enkel voor nu */
             }
