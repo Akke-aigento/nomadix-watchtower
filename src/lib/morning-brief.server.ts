@@ -3,7 +3,7 @@
  *
  * Onderwerp vertelt het al: "Rustig · …", "Aandacht · …" of "Actie · …".
  * Blokken (lege blokken verdwijnen): Actie, Aandacht, Sinds gisteren,
- * Komt eraan, Wacht op jouw go, Rustig, en een voetregel met Erkend + Zelfcontrole.
+ * Komt eraan, Wacht op jouw go, Rustig, en een voetregel met Erkend + Zelfcontrole + Zelftest.
  */
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { sendAlertMail } from "@/lib/scan.server";
@@ -343,6 +343,44 @@ export async function morningBrief(opts: { dryRun?: boolean; week?: boolean } = 
     foot.push(`Zelfcontrole: ${monitor.length} meting(en) lukken al een tijd niet — ${esc(monitor.map((i) => nameOf.get(i.target_id)).join(", "))}`);
   } else {
     foot.push(`Zelfcontrole: metingen in orde${unknownCount ? ` (${unknownCount} losse meetfout(en), telt niet mee)` : ""}`);
+  }
+
+  // Zelftest (selftest_runs, elke 3 uur): laatste run in de voet.
+  const { data: selftest } = await (
+    supabaseAdmin as unknown as {
+      from: (t: string) => {
+        select: (c: string) => {
+          order: (c: string, o: object) => {
+            limit: (n: number) => Promise<{
+              data: Array<{
+                ran_at: string;
+                passed: number;
+                failed: number;
+                total: number | null;
+                results: Array<{ name: string; ok: boolean }> | null;
+              }> | null;
+            }>;
+          };
+        };
+      };
+    }
+  )
+    .from("selftest_runs")
+    .select("ran_at, passed, failed, total, results")
+    .order("ran_at", { ascending: false })
+    .limit(1);
+  const st = selftest?.[0];
+  if (st) {
+    const broken = (st.results ?? []).filter((r) => !r.ok).map((r) => r.name);
+    const total = st.total ?? st.passed + st.failed;
+    const ago = since(st.ran_at) === "net" ? "net" : `${since(st.ran_at)} geleden`;
+    foot.push(
+      st.failed > 0
+        ? `Zelftest: ${st.failed} kapot: ${esc(broken.join(", ") || "onbekend")} (${esc(ago)})`
+        : `Zelftest: alle ${total} functies werken (${esc(ago)})`,
+    );
+  } else {
+    foot.push("Zelftest: nog geen run gevonden");
   }
 
   const { data: engine } = await supabaseAdmin.rpc("wt_engine_health");
