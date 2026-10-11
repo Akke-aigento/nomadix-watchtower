@@ -128,6 +128,8 @@ export const Route = createFileRoute("/api/public/selftest")({
             .select("sent, error")
             .eq("day", today);
           if (error) throw new Error(error.message);
+          // brief_log bestaat sinds 11-10-2026 13u; voor die dag is er geen logboek om te controleren.
+          if (!(data ?? []).length && today <= "2026-10-11") return "logboek start vandaag";
           must(
             (data ?? []).some((r) => r.sent),
             `geen verstuurde brief vandaag${data?.[0]?.error ? ` (${data[0].error})` : ""}`,
