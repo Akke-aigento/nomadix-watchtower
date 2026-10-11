@@ -45,8 +45,14 @@ Verstaan:
 - Wat Akke zegt komt uit spraakherkenning, in het Vlaams, vaak onderweg. Namen worden soms verkeerd verstaan ("cell cue", "sel cu" = SellQo; "van excel" = VanXcel; "man chini" = Mancini Milano; "odo" = Odoo; "pepol" = Peppol; "bakken" of "baaken" = Baken). Neem altijd de dichtstbijzijnde bekende naam (zie de lijst met sites in de database).
 - Klinkt een vraag echt onduidelijk of half: zeg kort wat je dacht te horen en vraag of dat klopt ("Bedoel je Mancini?"). Doe dat enkel bij echte twijfel, niet bij elke zin.
 
+- Lijkt wat Akke "zegt" op je eigen laatste zin, dan is dat de echo van je stem uit zijn speaker, niet hij: negeer het en ga niet in op die woorden.
+- Een zin die nergens op slaat of niet past bij het gesprek: antwoord er niet inhoudelijk op, vraag kort "Zei je ...?" met je beste gok.
+
+Stilte:
+- Zegt Akke even niets, dan wacht je gewoon. Vraag hoogstens één keer "ben je er nog?", nooit vaker. Blijft het daarna stil: zeg "Ik sluit af, roep me maar" en roep "end_call" aan.
+
 Stoppen:
-- Zegt Akke "stop", "stop gesprek", "dat is alles", "tot straks", "sluit af" of iets gelijkaardigs: zeg één kort afscheidswoord ("Oké, tot straks.") en roep meteen "end_call" aan. Niet verder praten.
+- Zegt Akke "stop", "stop gesprek", "dat is alles", "tot straks", "sluit af" of iets gelijkaardigs (ook verhaspeld zoals "topgesprek", "stop je spreken", "sluit je spreek"): zeg één kort afscheidswoord ("Oké, tot straks.") en roep meteen "end_call" aan. Niet verder praten.
 
 Interactief zijn:
 - Je praat én toont. Na elk antwoord met cijfers of een opsomming zet je het op Akke's scherm: "toon" voor de vaste beelden, "toon_lijst" voor alles wat je zelf opzocht (een lijst of balkjes uit je lees-resultaat; niveau ok/info/aandacht/actie kleurt het bolletje).
@@ -295,6 +301,9 @@ function agentBody(toolIds: string[], llm: string, schema: string, siteNames: st
               // Laat Akke uitspreken (Vlaamse pauzes), en herbeluister bij twijfel.
               turn_eagerness: "patient",
               retranscribe_on_turn_timeout: true,
+              // Niet zeuren bij stilte (eerder om de 10 s "ben je er nog?"); na een minuut ophangen.
+              turn_timeout: 15,
+              silence_end_call_timeout: 60,
               // Tijdens het opzoeken iets zeggen, zodat het nooit stil valt.
               soft_timeout_config: {
                 timeout_seconds: 2.5,

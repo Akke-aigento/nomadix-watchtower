@@ -23,9 +23,27 @@ import { ProposalSheet } from "@/components/proposal-detail";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 
-/** "Stop", "stop gesprek", "dat is alles"…: meteen afsluiten, zonder op het model te wachten. */
-export const STOP_RE =
-  /^\s*(ok[eé]?,?\s*)?(stop|stoppen|stop (het |de |dit )?gesprek|stop baken|baken stop|sluit (af|baken|het gesprek)|hou op|ophouden|dat is alles|dat was het|tot (straks|later)|da[gc]|doei|salut)[\s.!?]*$/i;
+/**
+ * "Stop", "stop gesprek", "dat is alles"…: meteen afsluiten, zonder op het model te wachten.
+ * Ruim, want de spraakherkenning maakt er soms "topgesprek", "stop je spreken" of "sluit je
+ * spreek" van. Enkel korte zinnen zonder vraagwoord, zodat "hoe stoppen we die storing" geen stop is.
+ */
+const STOP_WORDS =
+  /\b(stop\w*|top ?gesprek\w*|sluit\w*|hou op|ophouden|einde gesprek|dat is alles|dat was het|tot (straks|later|zo)|doei|salut|dag baken|bedankt baken)\b/;
+const QUESTION_WORDS = /\b(hoe|waarom|wat|welke|wanneer|waar|wie|storing|voorstel|site)\b/;
+export function isStop(text: string): boolean {
+  const t = text
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z ]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  const words = t
+    .split(" ")
+    .filter((w) => w && !/^(uh+|uhm+|ehm+|euh|hm+|ok|oke|okay|ja|nee|maar|nu|dan|baken)$/.test(w));
+  return words.length <= 4 && STOP_WORDS.test(t) && !QUESTION_WORDS.test(t);
+}
 
 type Mood = "rust" | "luistert" | "denkt" | "praat";
 type Turn = { id: number; role: "user" | "baken"; text: string; reply?: BakenReply };
@@ -189,7 +207,7 @@ function BakenExperience({ onClose }: { onClose: () => void }) {
     if (interruptRef.current) return c.setMicMuted(false);
     if (speaking) c.setMicMuted(true);
     // Bluetooth speelt een paar honderd ms achter: pas daarna weer luisteren.
-    else unmuteTimer.current = window.setTimeout(() => agent.current?.setMicMuted(false), 700);
+    else unmuteTimer.current = window.setTimeout(() => agent.current?.setMicMuted(false), 550);
   }, []);
   const [listening, setListening] = useState(false);
   const [proposal, setProposal] = useState<string | null>(null);
@@ -346,7 +364,7 @@ function BakenExperience({ onClose }: { onClose: () => void }) {
               .then(({ data }) => data?.[0] && setProposal(data[0].id));
           },
           message: (role, text) => {
-            if (role === "user" && STOP_RE.test(text)) {
+            if (role === "user" && isStop(text)) {
               void stopAgent();
               agent.current = null;
               onClose();
@@ -447,7 +465,7 @@ function BakenExperience({ onClose }: { onClose: () => void }) {
     if (!text) return;
     setHint(null);
     setInput("");
-    if (agent.current && STOP_RE.test(text)) {
+    if (agent.current && isStop(text)) {
       void stopAgent();
       agent.current = null;
       onClose();

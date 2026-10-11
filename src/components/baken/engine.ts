@@ -595,6 +595,14 @@ export async function toolToon(
   return { scene, facts: facts([scene])[0] };
 }
 
+function shortStand(d: TodayData): string {
+  const n = d.targets.filter((t) => t.level === "actie" || t.level === "aandacht").length;
+  if (d.level === "actie") return n === 1 ? "Eén site vraagt actie." : `${n} sites vragen actie.`;
+  if (d.level === "aandacht")
+    return n === 1 ? "Eén site vraagt aandacht." : `${n} sites vragen aandacht.`;
+  return "Alles rustig.";
+}
+
 /** Begroeting + stand bij het openen, lokaal berekend (0 credits, geen wachttijd voor het model). */
 export async function agentOpening(): Promise<{ begroeting: string; stand: string; scene: Scene }> {
   const d = await loadToday();
@@ -602,7 +610,8 @@ export async function agentOpening(): Promise<{ begroeting: string; stand: strin
   const h = new Date().getHours();
   const dag = h < 12 ? "Goeiemorgen" : h < 18 ? "Dag" : "Goeienavond";
   return {
-    begroeting: `${dag} Akke! ${r.say} Waarmee kan ik je helpen?`,
+    // Kort: hoe sneller hij zwijgt, hoe sneller jij kan praten. De details staan op het scherm.
+    begroeting: `${dag} Akke. ${shortStand(d)} Zeg het maar.`,
     stand: JSON.stringify(facts([{ kind: "vandaag", data: d }])[0]),
     scene: { kind: "vandaag", data: d },
   };
