@@ -16,6 +16,7 @@ Basis: **Akke Mail** (Lovable-project Nomadix Mail, `public/merk/akke-mail-icoon
 |---|---|
 | Akke Mail | ruit |
 | Watchtower | lens (ring + pupil) |
+| Akke Insights | drie oplopende balkjes |
 
 Een nieuwe tak = één nieuwe kern in `tools/akke_icon.py` (`KERN`), daarna:
 
@@ -30,3 +31,9 @@ Dat maakt `logo-mark.svg`, `favicon.svg`, `favicon.ico`, `favicon-32.png`, `appl
 
 - iOS bewaart het icoon van een beginscherm-app. Na een icoonwijziging: app van het beginscherm verwijderen en opnieuw "Zet op beginscherm" doen.
 - Lettertypen in de familie: Manrope (tekst) en JetBrains Mono (cijfers/labels), zoals Akke Mail.
+
+## Producten
+
+- **Akke Mail** — studioakke.com/mail
+- **Watchtower** — intern
+- **Akke Insights** — insights.studioakke.com, productpagina studioakke.com/insights
