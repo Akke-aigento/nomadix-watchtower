@@ -14,6 +14,12 @@ export type Database = {
   }
   public: {
     Tables: {
+      baken_memory: {
+        Row: { id: string; feit: string; created_at: string }
+        Insert: { id?: string; feit: string; created_at?: string }
+        Update: { id?: string; feit?: string; created_at?: string }
+        Relationships: []
+      }
       agenda_items: {
         Row: {
           id: string
@@ -824,6 +830,8 @@ export type Database = {
       is_watchtower_admin: { Args: never; Returns: boolean }
       wt_ingest_scan: { Args: { scan: Json }; Returns: Json }
       wt_engine_health: { Args: never; Returns: Json }
+      wt_baken_query: { Args: { q: string }; Returns: Json }
+      get_baken_tool_token: { Args: never; Returns: string }
       wt_latency_hourly: {
         Args: { p_days?: number }
         Returns: { target_id: string; hour: string; p50_ms: number; checks: number; fails: number }[]

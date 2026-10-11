@@ -99,7 +99,7 @@ export function startAgent(on: AgentEvents): Promise<AgentConversation | null> {
       console.warn("baken-agent", tokenRes.status, await tokenRes.text().catch(() => ""));
       return null;
     }
-    const { token } = (await tokenRes.json()) as { token?: string };
+    const { token, geheugen } = (await tokenRes.json()) as { token?: string; geheugen?: string };
     if (!token) return null;
     if (!live()) throw new AgentCancelled();
     on.scene(opening.scene);
@@ -108,7 +108,11 @@ export function startAgent(on: AgentEvents): Promise<AgentConversation | null> {
       conversationToken: token,
       connectionType: "webrtc",
       useWakeLock: true,
-      dynamicVariables: { begroeting: opening.begroeting, stand: opening.stand },
+      dynamicVariables: {
+        begroeting: opening.begroeting,
+        stand: opening.stand,
+        geheugen: geheugen || "nog niets",
+      },
       clientTools: {
         toon: async (q: { onderwerp?: string; site?: string }) => {
           const { scene, facts } = await toolToon(q?.onderwerp ?? "", q?.site);

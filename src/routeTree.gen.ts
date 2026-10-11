@@ -23,6 +23,7 @@ import { Route as AuthenticatedToegangRouteImport } from './routes/_authenticate
 import { Route as ApiBakenRouteImport } from './routes/api/baken'
 import { Route as ApiBakenAgentRouteImport } from './routes/api/baken-agent'
 import { Route as ApiBakenSttRouteImport } from './routes/api/baken-stt'
+import { Route as ApiBakenToolRouteImport } from './routes/api/baken-tool'
 import { Route as ApiBakenTtsRouteImport } from './routes/api/baken-tts'
 import { Route as AuthenticatedTargetIdRouteImport } from './routes/_authenticated/target.$id'
 import { Route as AuthenticatedTargetsNewRouteImport } from './routes/_authenticated/targets/new'
@@ -104,6 +105,11 @@ const ApiBakenSttRoute = ApiBakenSttRouteImport.update({
   path: '/api/baken-stt',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiBakenToolRoute = ApiBakenToolRouteImport.update({
+  id: '/api/baken-tool',
+  path: '/api/baken-tool',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiBakenTtsRoute = ApiBakenTtsRouteImport.update({
   id: '/api/baken-tts',
   path: '/api/baken-tts',
@@ -169,6 +175,7 @@ export interface FileRoutesByFullPath {
   '/api/baken': typeof ApiBakenRoute
   '/api/baken-agent': typeof ApiBakenAgentRoute
   '/api/baken-stt': typeof ApiBakenSttRoute
+  '/api/baken-tool': typeof ApiBakenToolRoute
   '/api/baken-tts': typeof ApiBakenTtsRoute
   '/target/$id': typeof AuthenticatedTargetIdRoute
   '/targets/new': typeof AuthenticatedTargetsNewRoute
@@ -194,6 +201,7 @@ export interface FileRoutesByTo {
   '/api/baken': typeof ApiBakenRoute
   '/api/baken-agent': typeof ApiBakenAgentRoute
   '/api/baken-stt': typeof ApiBakenSttRoute
+  '/api/baken-tool': typeof ApiBakenToolRoute
   '/api/baken-tts': typeof ApiBakenTtsRoute
   '/target/$id': typeof AuthenticatedTargetIdRoute
   '/targets/new': typeof AuthenticatedTargetsNewRoute
@@ -221,6 +229,7 @@ export interface FileRoutesById {
   '/api/baken': typeof ApiBakenRoute
   '/api/baken-agent': typeof ApiBakenAgentRoute
   '/api/baken-stt': typeof ApiBakenSttRoute
+  '/api/baken-tool': typeof ApiBakenToolRoute
   '/api/baken-tts': typeof ApiBakenTtsRoute
   '/_authenticated/target/$id': typeof AuthenticatedTargetIdRoute
   '/_authenticated/targets/new': typeof AuthenticatedTargetsNewRoute
@@ -248,6 +257,7 @@ export interface FileRouteTypes {
     | '/api/baken'
     | '/api/baken-agent'
     | '/api/baken-stt'
+    | '/api/baken-tool'
     | '/api/baken-tts'
     | '/target/$id'
     | '/targets/new'
@@ -273,6 +283,7 @@ export interface FileRouteTypes {
     | '/api/baken'
     | '/api/baken-agent'
     | '/api/baken-stt'
+    | '/api/baken-tool'
     | '/api/baken-tts'
     | '/target/$id'
     | '/targets/new'
@@ -299,6 +310,7 @@ export interface FileRouteTypes {
     | '/api/baken'
     | '/api/baken-agent'
     | '/api/baken-stt'
+    | '/api/baken-tool'
     | '/api/baken-tts'
     | '/_authenticated/target/$id'
     | '/_authenticated/targets/new'
@@ -318,6 +330,7 @@ export interface RootRouteChildren {
   ApiBakenRoute: typeof ApiBakenRoute
   ApiBakenAgentRoute: typeof ApiBakenAgentRoute
   ApiBakenSttRoute: typeof ApiBakenSttRoute
+  ApiBakenToolRoute: typeof ApiBakenToolRoute
   ApiBakenTtsRoute: typeof ApiBakenTtsRoute
   ApiPublicAgendaDoticsRoute: typeof ApiPublicAgendaDoticsRoute
   ApiPublicCheckRoute: typeof ApiPublicCheckRoute
@@ -426,6 +439,13 @@ declare module '@tanstack/react-router' {
       path: '/api/baken-stt'
       fullPath: '/api/baken-stt'
       preLoaderRoute: typeof ApiBakenSttRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/baken-tool': {
+      id: '/api/baken-tool'
+      path: '/api/baken-tool'
+      fullPath: '/api/baken-tool'
+      preLoaderRoute: typeof ApiBakenToolRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/baken-tts': {
@@ -537,6 +557,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiBakenRoute: ApiBakenRoute,
   ApiBakenAgentRoute: ApiBakenAgentRoute,
   ApiBakenSttRoute: ApiBakenSttRoute,
+  ApiBakenToolRoute: ApiBakenToolRoute,
   ApiBakenTtsRoute: ApiBakenTtsRoute,
   ApiPublicAgendaDoticsRoute: ApiPublicAgendaDoticsRoute,
   ApiPublicCheckRoute: ApiPublicCheckRoute,
