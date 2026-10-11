@@ -4,6 +4,7 @@
  * Laag 2 (optioneel): vrije vragen gaan naar /api/baken (taalmodel), met dezelfde cijfers als context.
  */
 import { supabase } from "@/integrations/supabase/client";
+import { rowsWith } from "@/lib/rows";
 
 export type Scene =
   | { kind: "vandaag"; data: TodayData }
@@ -144,7 +145,7 @@ async function loadAgenda(): Promise<AgendaLite[]> {
     .select("id, title, due_date, severity")
     .eq("status", "open")
     .order("due_date");
-  return (data ?? [])
+  return rowsWith(data, ["id", "title", "due_date", "severity"])
     .map((a) => ({ ...a, days: daysUntil(a.due_date) }))
     .filter((a) => a.days <= 120);
 }
@@ -216,7 +217,7 @@ async function loadCredits(): Promise<CreditLite[]> {
   const { data } = await supabase
     .from("credit_latest")
     .select("project_name, exec_s_per_day, drivers");
-  return (data ?? [])
+  return rowsWith(data, ["project_name"])
     .filter((r) => (r.exec_s_per_day ?? 0) > 2)
     .map((r) => ({
       name: r.project_name,

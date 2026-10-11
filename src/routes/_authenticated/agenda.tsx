@@ -16,6 +16,7 @@ import { Button } from "@/components/ui/button";
 import { DetailPanel } from "@/components/detail-panel";
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
+import { rowsWith, type WithFields } from "@/lib/rows";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_authenticated/agenda")({
@@ -23,7 +24,8 @@ export const Route = createFileRoute("/_authenticated/agenda")({
   component: AgendaPage,
 });
 
-type Item = Tables<"agenda">;
+/** De view typet elke kolom nullable; deze vullen altijd (agenda_items én de scan-tak). */
+type Item = WithFields<Tables<"agenda">, "id" | "title" | "due_date" | "kind" | "severity">;
 
 const KIND_LABEL: Record<string, string> = {
   sunset: "Uitfasering",
@@ -94,7 +96,7 @@ function AgendaPage() {
         .eq("status", "open")
         .order("due_date");
       if (error) throw error;
-      return data ?? [];
+      return rowsWith(data, ["id", "title", "due_date", "kind", "severity"]);
     },
   });
 

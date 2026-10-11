@@ -4,6 +4,7 @@
  * reden), voorstellen met hun pakket, en elke site met haar echte adres.
  */
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { rowsWith } from "@/lib/rows";
 
 const day = (iso: string | null | undefined) =>
   iso
@@ -128,7 +129,7 @@ export async function buildDossier(): Promise<string> {
 
   lines.push("\nAGENDA (te laat of binnen 45 dagen):");
   if (!(agenda.data ?? []).length) lines.push("- niets");
-  for (const a of agenda.data ?? []) {
+  for (const a of rowsWith(agenda.data, ["title", "due_date", "severity"])) {
     const late = Math.round((now.getTime() - Date.parse(a.due_date)) / 86400000);
     lines.push(
       `- ${day(a.due_date)} ${a.due_date.slice(0, 4)}${late > 0 ? ` (${late} dagen te laat)` : ""}: ${a.title} [${a.severity}]`,
