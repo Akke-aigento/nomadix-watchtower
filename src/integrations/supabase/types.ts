@@ -10,63 +10,79 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.15"
+    PostgrestVersion: "14.5"
   }
   public: {
     Tables: {
-      baken_memory: {
-        Row: { id: string; feit: string; created_at: string }
-        Insert: { id?: string; feit: string; created_at?: string }
-        Update: { id?: string; feit?: string; created_at?: string }
-        Relationships: []
-      }
       agenda_items: {
         Row: {
-          id: string
-          fingerprint: string
-          title: string
+          created_at: string
           description: string | null
           due_date: string
+          fingerprint: string
+          id: string
+          integration_key: string | null
           kind: string
           severity: string
-          integration_key: string | null
-          target_id: string | null
           source_url: string | null
           status: string
-          created_at: string
+          target_id: string | null
+          title: string
           updated_at: string
         }
         Insert: {
-          id?: string
-          fingerprint: string
-          title: string
+          created_at?: string
           description?: string | null
           due_date: string
+          fingerprint: string
+          id?: string
+          integration_key?: string | null
           kind?: string
           severity?: string
-          integration_key?: string | null
-          target_id?: string | null
           source_url?: string | null
           status?: string
-          created_at?: string
+          target_id?: string | null
+          title: string
           updated_at?: string
         }
         Update: {
-          id?: string
-          fingerprint?: string
-          title?: string
+          created_at?: string
           description?: string | null
           due_date?: string
+          fingerprint?: string
+          id?: string
+          integration_key?: string | null
           kind?: string
           severity?: string
-          integration_key?: string | null
-          target_id?: string | null
           source_url?: string | null
           status?: string
-          created_at?: string
+          target_id?: string | null
+          title?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "agenda_items_integration_key_fkey"
+            columns: ["integration_key"]
+            isOneToOne: false
+            referencedRelation: "integrations"
+            referencedColumns: ["key"]
+          },
+          {
+            foreignKeyName: "agenda_items_integration_key_fkey"
+            columns: ["integration_key"]
+            isOneToOne: false
+            referencedRelation: "radar_coverage"
+            referencedColumns: ["key"]
+          },
+          {
+            foreignKeyName: "agenda_items_target_id_fkey"
+            columns: ["target_id"]
+            isOneToOne: false
+            referencedRelation: "watch_targets"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       alert_log: {
         Row: {
@@ -106,6 +122,108 @@ export type Database = {
           },
         ]
       }
+      baken_memory: {
+        Row: {
+          created_at: string
+          feit: string
+          id: string
+        }
+        Insert: {
+          created_at?: string
+          feit: string
+          id?: string
+        }
+        Update: {
+          created_at?: string
+          feit?: string
+          id?: string
+        }
+        Relationships: []
+      }
+      brief_log: {
+        Row: {
+          channel: string
+          created_at: string
+          day: string
+          error: string | null
+          forced: boolean
+          id: string
+          sent: boolean
+          subject: string | null
+        }
+        Insert: {
+          channel?: string
+          created_at?: string
+          day?: string
+          error?: string | null
+          forced?: boolean
+          id?: string
+          sent: boolean
+          subject?: string | null
+        }
+        Update: {
+          channel?: string
+          created_at?: string
+          day?: string
+          error?: string | null
+          forced?: boolean
+          id?: string
+          sent?: boolean
+          subject?: string | null
+        }
+        Relationships: []
+      }
+      credit_snapshots: {
+        Row: {
+          crons: Json
+          db_size_mb: number | null
+          drivers: string[]
+          exec_s_per_day: number | null
+          id: string
+          lovable_project_id: string
+          pg_net_backlog: number | null
+          project_name: string
+          realtime_tables: string[]
+          savings: Json
+          source: string
+          stats_since: string | null
+          taken_at: string
+          top_queries: Json
+        }
+        Insert: {
+          crons?: Json
+          db_size_mb?: number | null
+          drivers?: string[]
+          exec_s_per_day?: number | null
+          id?: string
+          lovable_project_id: string
+          pg_net_backlog?: number | null
+          project_name: string
+          realtime_tables?: string[]
+          savings?: Json
+          source?: string
+          stats_since?: string | null
+          taken_at?: string
+          top_queries?: Json
+        }
+        Update: {
+          crons?: Json
+          db_size_mb?: number | null
+          drivers?: string[]
+          exec_s_per_day?: number | null
+          id?: string
+          lovable_project_id?: string
+          pg_net_backlog?: number | null
+          project_name?: string
+          realtime_tables?: string[]
+          savings?: Json
+          source?: string
+          stats_since?: string | null
+          taken_at?: string
+          top_queries?: Json
+        }
+        Relationships: []
+      }
       daily_summaries: {
         Row: {
           avg_latency_ms: number | null
@@ -141,240 +259,66 @@ export type Database = {
           },
         ]
       }
-      credit_snapshots: {
-        Row: {
-          id: string
-          lovable_project_id: string
-          project_name: string
-          taken_at: string
-          exec_s_per_day: number | null
-          stats_since: string | null
-          db_size_mb: number | null
-          pg_net_backlog: number | null
-          crons: Json
-          top_queries: Json
-          realtime_tables: string[]
-          drivers: string[]
-          savings: Json
-          source: string
-        }
-        Insert: {
-          id?: string
-          lovable_project_id: string
-          project_name: string
-          taken_at?: string
-          exec_s_per_day?: number | null
-          stats_since?: string | null
-          db_size_mb?: number | null
-          pg_net_backlog?: number | null
-          crons?: Json
-          top_queries?: Json
-          realtime_tables?: string[]
-          drivers?: string[]
-          savings?: Json
-          source?: string
-        }
-        Update: {
-          id?: string
-          lovable_project_id?: string
-          project_name?: string
-          taken_at?: string
-          exec_s_per_day?: number | null
-          stats_since?: string | null
-          db_size_mb?: number | null
-          pg_net_backlog?: number | null
-          crons?: Json
-          top_queries?: Json
-          realtime_tables?: string[]
-          drivers?: string[]
-          savings?: Json
-          source?: string
-        }
-        Relationships: []
-      }
       findings: {
         Row: {
-          id: string
+          affected_tenants: number | null
+          analysis: string | null
+          bundle: string | null
+          detected_at: string
+          detected_by: string
+          effective_date: string | null
           fingerprint: string
+          id: string
+          impact: string
           integration_key: string | null
           kind: string
-          title: string
-          summary: string
-          analysis: string | null
-          impact: string
           severity: string
-          affected_tenants: number | null
-          source_url: string
           source_published: string | null
-          effective_date: string | null
+          source_url: string
           status: string
-          bundle: string | null
-          detected_by: string
-          detected_at: string
+          summary: string
+          title: string
           updated_at: string
         }
         Insert: {
-          id?: string
+          affected_tenants?: number | null
+          analysis?: string | null
+          bundle?: string | null
+          detected_at?: string
+          detected_by?: string
+          effective_date?: string | null
           fingerprint: string
+          id?: string
+          impact?: string
           integration_key?: string | null
           kind: string
-          title: string
-          summary: string
-          analysis?: string | null
-          impact?: string
           severity?: string
-          affected_tenants?: number | null
+          source_published?: string | null
           source_url: string
-          source_published?: string | null
-          effective_date?: string | null
           status?: string
-          bundle?: string | null
-          detected_by?: string
-          detected_at?: string
+          summary: string
+          title: string
           updated_at?: string
         }
         Update: {
-          id?: string
+          affected_tenants?: number | null
+          analysis?: string | null
+          bundle?: string | null
+          detected_at?: string
+          detected_by?: string
+          effective_date?: string | null
           fingerprint?: string
+          id?: string
+          impact?: string
           integration_key?: string | null
           kind?: string
-          title?: string
-          summary?: string
-          analysis?: string | null
-          impact?: string
           severity?: string
-          affected_tenants?: number | null
-          source_url?: string
           source_published?: string | null
-          effective_date?: string | null
+          source_url?: string
           status?: string
-          bundle?: string | null
-          detected_by?: string
-          detected_at?: string
+          summary?: string
+          title?: string
           updated_at?: string
-        }
-        Relationships: []
-      }
-      integration_usages: {
-        Row: {
-          id: string
-          integration_key: string
-          repo: string
-          file: string
-          version: string
-          occurrences: number
-          scanned_at: string
-          kind: string
-        }
-        Insert: {
-          id?: string
-          integration_key: string
-          repo: string
-          file: string
-          version?: string
-          occurrences?: number
-          scanned_at?: string
-          kind?: string
-        }
-        Update: {
-          id?: string
-          integration_key?: string
-          repo?: string
-          file?: string
-          version?: string
-          occurrences?: number
-          scanned_at?: string
-          kind?: string
-        }
-        Relationships: []
-      }
-      integrations: {
-        Row: {
-          id: string
-          key: string
-          name: string
-          partner: string
-          category: string
-          used_version: string | null
-          latest_version: string | null
-          usage_state: string
-          active_tenants: number | null
-          last_activity_at: string | null
-          risk: string
-          risk_note: string | null
-          discovered_via: string
-          discovered_at: string
-          last_seen_at: string
-          docs_url: string | null
-          changelog_url: string | null
-          status_page_url: string | null
-          upstream_indicator: string | null
-          upstream_description: string | null
-          upstream_checked_at: string | null
-          radar_checked_at: string | null
-          notes: string | null
-          pricing_url: string | null
-          review_days: number | null
-          radar_note: string | null
-          touchpoints: Json
-        }
-        Insert: {
-          id?: string
-          key: string
-          name: string
-          partner: string
-          category?: string
-          used_version?: string | null
-          latest_version?: string | null
-          usage_state?: string
-          active_tenants?: number | null
-          last_activity_at?: string | null
-          risk?: string
-          risk_note?: string | null
-          discovered_via?: string
-          discovered_at?: string
-          last_seen_at?: string
-          docs_url?: string | null
-          changelog_url?: string | null
-          status_page_url?: string | null
-          upstream_indicator?: string | null
-          upstream_description?: string | null
-          upstream_checked_at?: string | null
-          radar_checked_at?: string | null
-          notes?: string | null
-          pricing_url?: string | null
-          review_days?: number | null
-          radar_note?: string | null
-          touchpoints?: Json
-        }
-        Update: {
-          id?: string
-          key?: string
-          name?: string
-          partner?: string
-          category?: string
-          used_version?: string | null
-          latest_version?: string | null
-          usage_state?: string
-          active_tenants?: number | null
-          last_activity_at?: string | null
-          risk?: string
-          risk_note?: string | null
-          discovered_via?: string
-          discovered_at?: string
-          last_seen_at?: string
-          docs_url?: string | null
-          changelog_url?: string | null
-          status_page_url?: string | null
-          upstream_indicator?: string | null
-          upstream_description?: string | null
-          upstream_checked_at?: string | null
-          radar_checked_at?: string | null
-          notes?: string | null
-          pricing_url?: string | null
-          review_days?: number | null
-          radar_note?: string | null
-          touchpoints?: Json
         }
         Relationships: []
       }
@@ -472,11 +416,218 @@ export type Database = {
           },
         ]
       }
-      watchtower_admins: {
-        Row: { created_at: string; user_id: string }
-        Insert: { created_at?: string; user_id: string }
-        Update: { created_at?: string; user_id?: string }
+      integration_usages: {
+        Row: {
+          file: string
+          id: string
+          integration_key: string
+          kind: string
+          occurrences: number
+          repo: string
+          scanned_at: string
+          version: string
+        }
+        Insert: {
+          file: string
+          id?: string
+          integration_key: string
+          kind?: string
+          occurrences?: number
+          repo: string
+          scanned_at?: string
+          version?: string
+        }
+        Update: {
+          file?: string
+          id?: string
+          integration_key?: string
+          kind?: string
+          occurrences?: number
+          repo?: string
+          scanned_at?: string
+          version?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "integration_usages_integration_key_fkey"
+            columns: ["integration_key"]
+            isOneToOne: false
+            referencedRelation: "integrations"
+            referencedColumns: ["key"]
+          },
+          {
+            foreignKeyName: "integration_usages_integration_key_fkey"
+            columns: ["integration_key"]
+            isOneToOne: false
+            referencedRelation: "radar_coverage"
+            referencedColumns: ["key"]
+          },
+        ]
+      }
+      integrations: {
+        Row: {
+          active_tenants: number | null
+          category: string
+          changelog_url: string | null
+          discovered_at: string
+          discovered_via: string
+          docs_url: string | null
+          id: string
+          key: string
+          last_activity_at: string | null
+          last_seen_at: string
+          latest_version: string | null
+          name: string
+          notes: string | null
+          partner: string
+          pricing_url: string | null
+          radar_checked_at: string | null
+          radar_note: string | null
+          review_days: number | null
+          risk: string
+          risk_note: string | null
+          status_page_url: string | null
+          touchpoints: Json
+          upstream_checked_at: string | null
+          upstream_description: string | null
+          upstream_indicator: string | null
+          usage_state: string
+          used_version: string | null
+        }
+        Insert: {
+          active_tenants?: number | null
+          category?: string
+          changelog_url?: string | null
+          discovered_at?: string
+          discovered_via?: string
+          docs_url?: string | null
+          id?: string
+          key: string
+          last_activity_at?: string | null
+          last_seen_at?: string
+          latest_version?: string | null
+          name: string
+          notes?: string | null
+          partner: string
+          pricing_url?: string | null
+          radar_checked_at?: string | null
+          radar_note?: string | null
+          review_days?: number | null
+          risk?: string
+          risk_note?: string | null
+          status_page_url?: string | null
+          touchpoints?: Json
+          upstream_checked_at?: string | null
+          upstream_description?: string | null
+          upstream_indicator?: string | null
+          usage_state?: string
+          used_version?: string | null
+        }
+        Update: {
+          active_tenants?: number | null
+          category?: string
+          changelog_url?: string | null
+          discovered_at?: string
+          discovered_via?: string
+          docs_url?: string | null
+          id?: string
+          key?: string
+          last_activity_at?: string | null
+          last_seen_at?: string
+          latest_version?: string | null
+          name?: string
+          notes?: string | null
+          partner?: string
+          pricing_url?: string | null
+          radar_checked_at?: string | null
+          radar_note?: string | null
+          review_days?: number | null
+          risk?: string
+          risk_note?: string | null
+          status_page_url?: string | null
+          touchpoints?: Json
+          upstream_checked_at?: string | null
+          upstream_description?: string | null
+          upstream_indicator?: string | null
+          usage_state?: string
+          used_version?: string | null
+        }
         Relationships: []
+      }
+      proposals: {
+        Row: {
+          bundle: string | null
+          bundle_order: number | null
+          bundle_title: string | null
+          category: string
+          created_at: string
+          decided_at: string | null
+          description: string
+          executed_at: string | null
+          fingerprint: string | null
+          id: string
+          incident_id: string | null
+          proposed_action: string
+          result: string | null
+          source: string
+          status: string
+          target_id: string | null
+          title: string
+        }
+        Insert: {
+          bundle?: string | null
+          bundle_order?: number | null
+          bundle_title?: string | null
+          category: string
+          created_at?: string
+          decided_at?: string | null
+          description: string
+          executed_at?: string | null
+          fingerprint?: string | null
+          id?: string
+          incident_id?: string | null
+          proposed_action: string
+          result?: string | null
+          source?: string
+          status?: string
+          target_id?: string | null
+          title: string
+        }
+        Update: {
+          bundle?: string | null
+          bundle_order?: number | null
+          bundle_title?: string | null
+          category?: string
+          created_at?: string
+          decided_at?: string | null
+          description?: string
+          executed_at?: string | null
+          fingerprint?: string | null
+          id?: string
+          incident_id?: string | null
+          proposed_action?: string
+          result?: string | null
+          source?: string
+          status?: string
+          target_id?: string | null
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "proposals_incident_id_fkey"
+            columns: ["incident_id"]
+            isOneToOne: false
+            referencedRelation: "incidents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "proposals_target_id_fkey"
+            columns: ["target_id"]
+            isOneToOne: false
+            referencedRelation: "watch_targets"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       push_subscriptions: {
         Row: {
@@ -513,74 +664,6 @@ export type Database = {
           user_id?: string | null
         }
         Relationships: []
-      }
-      proposals: {
-        Row: {
-          bundle: string | null
-          bundle_title: string | null
-          bundle_order: number | null
-          executed_at: string | null
-          fingerprint: string | null
-          incident_id: string | null
-          result: string | null
-          category: string
-          created_at: string
-          decided_at: string | null
-          description: string
-          id: string
-          proposed_action: string
-          source: string
-          status: string
-          target_id: string | null
-          title: string
-        }
-        Insert: {
-          bundle?: string | null
-          bundle_title?: string | null
-          bundle_order?: number | null
-          executed_at?: string | null
-          fingerprint?: string | null
-          incident_id?: string | null
-          result?: string | null
-          category: string
-          created_at?: string
-          decided_at?: string | null
-          description: string
-          id?: string
-          proposed_action: string
-          source?: string
-          status?: string
-          target_id?: string | null
-          title: string
-        }
-        Update: {
-          bundle?: string | null
-          bundle_title?: string | null
-          bundle_order?: number | null
-          executed_at?: string | null
-          fingerprint?: string | null
-          incident_id?: string | null
-          result?: string | null
-          category?: string
-          created_at?: string
-          decided_at?: string | null
-          description?: string
-          id?: string
-          proposed_action?: string
-          source?: string
-          status?: string
-          target_id?: string | null
-          title?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "proposals_target_id_fkey"
-            columns: ["target_id"]
-            isOneToOne: false
-            referencedRelation: "watch_targets"
-            referencedColumns: ["id"]
-          },
-        ]
       }
       scan_results: {
         Row: {
@@ -620,10 +703,84 @@ export type Database = {
           },
         ]
       }
+      site_analytics_daily: {
+        Row: {
+          bounce_rate: number | null
+          day: string
+          fetched_at: string
+          pageviews: number
+          session_min: number | null
+          target_id: string
+          visitors: number
+        }
+        Insert: {
+          bounce_rate?: number | null
+          day: string
+          fetched_at?: string
+          pageviews?: number
+          session_min?: number | null
+          target_id: string
+          visitors?: number
+        }
+        Update: {
+          bounce_rate?: number | null
+          day?: string
+          fetched_at?: string
+          pageviews?: number
+          session_min?: number | null
+          target_id?: string
+          visitors?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "site_analytics_daily_target_id_fkey"
+            columns: ["target_id"]
+            isOneToOne: false
+            referencedRelation: "watch_targets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      site_analytics_lists: {
+        Row: {
+          countries: Json
+          devices: Json
+          fetched_at: string
+          pages: Json
+          period_days: number
+          sources: Json
+          target_id: string
+        }
+        Insert: {
+          countries?: Json
+          devices?: Json
+          fetched_at?: string
+          pages?: Json
+          period_days: number
+          sources?: Json
+          target_id: string
+        }
+        Update: {
+          countries?: Json
+          devices?: Json
+          fetched_at?: string
+          pages?: Json
+          period_days?: number
+          sources?: Json
+          target_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "site_analytics_lists_target_id_fkey"
+            columns: ["target_id"]
+            isOneToOne: false
+            referencedRelation: "watch_targets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       watch_targets: {
         Row: {
-          screenshot_url: string | null
-          sellqo_tenant_id: string | null
           checks: Json
           created_at: string
           enabled: boolean
@@ -637,12 +794,12 @@ export type Database = {
           lovable_project_id: string | null
           name: string
           notes: string | null
+          screenshot_url: string | null
+          sellqo_tenant_id: string | null
           status: string
           url: string
         }
         Insert: {
-          screenshot_url?: string | null
-          sellqo_tenant_id?: string | null
           checks?: Json
           created_at?: string
           enabled?: boolean
@@ -656,12 +813,12 @@ export type Database = {
           lovable_project_id?: string | null
           name: string
           notes?: string | null
+          screenshot_url?: string | null
+          sellqo_tenant_id?: string | null
           status?: string
           url: string
         }
         Update: {
-          screenshot_url?: string | null
-          sellqo_tenant_id?: string | null
           checks?: Json
           created_at?: string
           enabled?: boolean
@@ -675,173 +832,142 @@ export type Database = {
           lovable_project_id?: string | null
           name?: string
           notes?: string | null
+          screenshot_url?: string | null
+          sellqo_tenant_id?: string | null
           status?: string
           url?: string
         }
         Relationships: []
       }
+      watchtower_admins: {
+        Row: {
+          created_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       web_access: {
         Row: {
-          domain: string
-          reason: string
-          integration_key: string | null
-          status: string
-          requested_at: string
           decided_at: string | null
+          domain: string
+          integration_key: string | null
+          reason: string
+          requested_at: string
+          status: string
           synced_at: string | null
         }
         Insert: {
+          decided_at?: string | null
           domain: string
+          integration_key?: string | null
           reason: string
-          integration_key?: string | null
-          status?: string
           requested_at?: string
-          decided_at?: string | null
+          status?: string
           synced_at?: string | null
         }
         Update: {
+          decided_at?: string | null
           domain?: string
-          reason?: string
           integration_key?: string | null
-          status?: string
+          reason?: string
           requested_at?: string
-          decided_at?: string | null
+          status?: string
           synced_at?: string | null
-        }
-        Relationships: []
-      }
-      site_analytics_daily: {
-        Row: {
-          target_id: string
-          day: string
-          visitors: number
-          pageviews: number
-          bounce_rate: number | null
-          session_min: number | null
-          fetched_at: string
-        }
-        Insert: {
-          target_id: string
-          day: string
-          visitors?: number
-          pageviews?: number
-          bounce_rate?: number | null
-          session_min?: number | null
-          fetched_at?: string
-        }
-        Update: {
-          target_id?: string
-          day?: string
-          visitors?: number
-          pageviews?: number
-          bounce_rate?: number | null
-          session_min?: number | null
-          fetched_at?: string
-        }
-        Relationships: []
-      }
-      site_analytics_lists: {
-        Row: {
-          target_id: string
-          period_days: number
-          pages: Json
-          sources: Json
-          devices: Json
-          countries: Json
-          fetched_at: string
-        }
-        Insert: {
-          target_id: string
-          period_days: number
-          pages?: Json
-          sources?: Json
-          devices?: Json
-          countries?: Json
-          fetched_at?: string
-        }
-        Update: {
-          target_id?: string
-          period_days?: number
-          pages?: Json
-          sources?: Json
-          devices?: Json
-          countries?: Json
-          fetched_at?: string
         }
         Relationships: []
       }
     }
     Views: {
-      credit_latest: {
+      agenda: {
         Row: {
-          id: string
-          lovable_project_id: string
-          project_name: string
-          taken_at: string
-          exec_s_per_day: number | null
-          stats_since: string | null
-          db_size_mb: number | null
-          pg_net_backlog: number | null
-          crons: Json
-          top_queries: Json
-          realtime_tables: string[]
-          drivers: string[]
-          savings: Json
-          source: string
+          description: string | null
+          due_date: string | null
+          id: string | null
+          integration_key: string | null
+          kind: string | null
+          origin: string | null
+          severity: string | null
+          source_url: string | null
+          status: string | null
+          target_id: string | null
+          title: string | null
         }
         Relationships: []
       }
-      agenda: {
+      credit_latest: {
         Row: {
-          id: string
-          title: string
-          description: string | null
-          due_date: string
-          kind: string
-          severity: string
-          integration_key: string | null
-          target_id: string | null
-          source_url: string | null
-          status: string
-          origin: string
+          crons: Json | null
+          db_size_mb: number | null
+          drivers: string[] | null
+          exec_s_per_day: number | null
+          id: string | null
+          lovable_project_id: string | null
+          pg_net_backlog: number | null
+          project_name: string | null
+          realtime_tables: string[] | null
+          savings: Json | null
+          source: string | null
+          stats_since: string | null
+          taken_at: string | null
+          top_queries: Json | null
         }
         Relationships: []
       }
       radar_coverage: {
         Row: {
-          key: string
-          name: string
-          partner: string
-          usage_state: string
-          risk: string
+          due: boolean | null
+          key: string | null
+          name: string | null
+          partner: string | null
           radar_checked_at: string | null
           radar_note: string | null
-          review_days_effective: number
-          due: boolean
+          review_days_effective: number | null
+          risk: string | null
+          usage_state: string | null
+        }
+        Insert: {
+          due?: never
+          key?: string | null
+          name?: string | null
+          partner?: string | null
+          radar_checked_at?: string | null
+          radar_note?: string | null
+          review_days_effective?: never
+          risk?: string | null
+          usage_state?: string | null
+        }
+        Update: {
+          due?: never
+          key?: string | null
+          name?: string | null
+          partner?: string | null
+          radar_checked_at?: string | null
+          radar_note?: string | null
+          review_days_effective?: never
+          risk?: string | null
+          usage_state?: string | null
         }
         Relationships: []
       }
     }
     Functions: {
       get_agenda_token: { Args: never; Returns: string }
+      get_baken_tool_token: { Args: never; Returns: string }
       get_cron_secret: { Args: never; Returns: string }
       get_heartbeat_url: { Args: never; Returns: string }
       get_vapid_private_jwk: { Args: never; Returns: string }
       is_watchtower_admin: { Args: never; Returns: boolean }
-      wt_ingest_scan: { Args: { scan: Json }; Returns: Json }
-      wt_engine_health: { Args: never; Returns: Json }
       wt_baken_query: { Args: { q: string }; Returns: Json }
-      get_baken_tool_token: { Args: never; Returns: string }
-      wt_latency_hourly: {
-        Args: { p_days?: number }
-        Returns: { target_id: string; hour: string; p50_ms: number; checks: number; fails: number }[]
-      }
-      wt_incidents_weekly: {
-        Args: { p_weeks?: number }
-        Returns: { week: string; grp: string; n: number }[]
-      }
       wt_daily_check_status: {
-        Args: { p_target: string; p_days?: number }
+        Args: { p_days?: number; p_target: string }
         Returns: {
           check_key: string
           day: string
@@ -849,6 +975,27 @@ export type Database = {
           ok: number
           unknown: number
           warn: number
+        }[]
+      }
+      wt_engine_health: { Args: never; Returns: Json }
+      wt_incidents_weekly: {
+        Args: { p_weeks?: number }
+        Returns: {
+          grp: string
+          n: number
+          week: string
+        }[]
+      }
+      wt_ingest_analytics: { Args: { p: Json }; Returns: number }
+      wt_ingest_scan: { Args: { scan: Json }; Returns: Json }
+      wt_latency_hourly: {
+        Args: { p_days?: number }
+        Returns: {
+          checks: number
+          fails: number
+          hour: string
+          p50_ms: number
+          target_id: string
         }[]
       }
       wt_recent_results: {
@@ -881,12 +1028,12 @@ export type Tables<
   DefaultSchemaTableNameOrOptions extends
     | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
         DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -910,11 +1057,11 @@ export type TablesInsert<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -935,11 +1082,11 @@ export type TablesUpdate<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -960,11 +1107,11 @@ export type Enums<
   DefaultSchemaEnumNameOrOptions extends
     | keyof DefaultSchema["Enums"]
     | { schema: keyof DatabaseWithoutInternals },
-  EnumName extends DefaultSchemaEnumNameOrOptions extends {
+  EnumName extends (DefaultSchemaEnumNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaEnumNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -977,11 +1124,11 @@ export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
     | keyof DefaultSchema["CompositeTypes"]
     | { schema: keyof DatabaseWithoutInternals },
-  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
+  CompositeTypeName extends (PublicCompositeTypeNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
-    : never = never,
+    : never) = never,
 > = PublicCompositeTypeNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
