@@ -425,6 +425,54 @@ async function memoryLine(): Promise<string> {
 export const Route = createFileRoute("/api/baken-agent")({
   server: {
     handlers: {
+      /**
+       * Diagnose (enkel cron-secret): de laatste gesprekken met wat de spraakherkenning hoorde.
+       * GET /api/baken-agent?diag=3
+       */
+      GET: async ({ request }) => {
+        const secret = request.headers.get("x-cron-secret");
+        const { isValidCronSecret } = await import("@/lib/cron-secret.server");
+        if (!secret || !(await isValidCronSecret(secret)))
+          return new Response("Unauthorized", { status: 401 });
+        const { elevenKey } = await import("@/lib/baken-auth.server");
+        const key = elevenKey();
+        if (!key) return Response.json({ error: "geen sleutel" }, { status: 501 });
+        const n = Math.min(
+          10,
+          Math.max(1, Number(new URL(request.url).searchParams.get("diag")) || 3),
+        );
+        try {
+          ready ??= ensureAgent(key);
+          const { agentId } = await ready;
+          const list = ((await el(key, `/convai/conversations?agent_id=${agentId}&page_size=${n}`))
+            .conversations ?? []) as { conversation_id: string }[];
+          const out = [];
+          for (const c of list.slice(0, n)) {
+            const d = await el(key, `/convai/conversations/${c.conversation_id}`);
+            const tr = (d.transcript ?? []) as Array<Record<string, unknown>>;
+            out.push({
+              id: c.conversation_id,
+              start: (d.metadata as Json | undefined)?.start_time_unix_secs,
+              duur: (d.metadata as Json | undefined)?.call_duration_secs,
+              einde: (d.metadata as Json | undefined)?.termination_reason,
+              beurten: tr.map((t) => ({
+                wie: t.role,
+                tekst: t.message,
+                tijd: t.time_in_call_secs,
+                tools: Array.isArray(t.tool_calls)
+                  ? (t.tool_calls as Json[]).map((x) => x.tool_name)
+                  : undefined,
+              })),
+            });
+          }
+          return Response.json({ gesprekken: out });
+        } catch (e) {
+          return Response.json(
+            { error: e instanceof Error ? e.message : String(e) },
+            { status: 502 },
+          );
+        }
+      },
       POST: async ({ request }) => {
         const { isBakenAdmin, elevenKey } = await import("@/lib/baken-auth.server");
         const secret = request.headers.get("x-cron-secret");
