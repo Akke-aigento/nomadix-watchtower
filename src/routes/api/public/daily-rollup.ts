@@ -1,3 +1,4 @@
+import { errText } from "@/lib/err";
 import { createFileRoute } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/api/public/daily-rollup")({
@@ -21,6 +22,6 @@ async function handle(request: Request) {
     return Response.json(result);
   } catch (e) {
     console.error("daily-rollup failed", e);
-    return Response.json({ error: e instanceof Error ? e.message : String(e) }, { status: 500 });
+    return Response.json({ error: errText(e) }, { status: 500 });
   }
 }

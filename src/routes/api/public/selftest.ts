@@ -1,3 +1,4 @@
+import { errText } from "@/lib/err";
 import { createFileRoute } from "@tanstack/react-router";
 
 /**
@@ -29,7 +30,7 @@ export const Route = createFileRoute("/api/public/selftest")({
               name,
               ok: false,
               ms: Date.now() - t,
-              detail: (e instanceof Error ? e.message : String(e)).slice(0, 300),
+              detail: (errText(e)).slice(0, 300),
             });
           }
         };

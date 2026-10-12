@@ -1,3 +1,4 @@
+import { errText } from "@/lib/err";
 import { createFileRoute } from "@tanstack/react-router";
 
 /**
@@ -55,9 +56,9 @@ async function handle(request: Request) {
         sent: false,
         forced: force,
         subject: null,
-        error: e instanceof Error ? e.message : String(e),
+        error: errText(e),
       });
-    return Response.json({ error: e instanceof Error ? e.message : String(e) }, { status: 500 });
+    return Response.json({ error: errText(e) }, { status: 500 });
   }
 }
 
