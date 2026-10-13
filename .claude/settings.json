@@ -33,6 +33,7 @@
       "WebFetch(domain:github.blog)",
       "WebFetch(domain:github.com)",
       "WebFetch(domain:imgeditor.co)",
+      "WebFetch(domain:isdown.app)",
       "WebFetch(domain:learn.microsoft.com)",
       "WebFetch(domain:lovable.dev)",
       "WebFetch(domain:migadu.com)",
