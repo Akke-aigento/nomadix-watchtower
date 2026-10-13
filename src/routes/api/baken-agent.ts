@@ -315,6 +315,9 @@ async function el(key: string, path: string, init?: { method?: string; body?: un
     method: init?.method ?? "GET",
     headers: { "xi-api-key": key, "Content-Type": "application/json" },
     body: init?.body ? JSON.stringify(init.body) : undefined,
+    // Zonder limiet blijft een hangende ElevenLabs-call de gecachte readyFor-promise vasthouden
+    // en hangt elke volgende Baken-start in die worker tot Cloudflare 524 geeft.
+    signal: AbortSignal.timeout(20_000),
   });
   const text = await res.text();
   if (!res.ok) throw new Error(`ElevenLabs ${res.status} op ${path}: ${text.slice(0, 300)}`);
