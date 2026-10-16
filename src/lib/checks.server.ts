@@ -68,7 +68,7 @@ const DEFAULT_TITLE = /^(lovable app|lovable generated project|vite \+ react( \+
 export type ContentIssue = "error_page" | "maintenance" | "default_title" | "empty_page";
 
 /** Wat zegt de pagina zelf? 200 OK kan nog altijd een foutpagina zijn. */
-export function inspectHtml(html: string): { title: string | null; bytes: number; issue: ContentIssue | null } {
+export function inspectHtml(html: string): { title: string | null; bytes: number; issue: ContentIssue | null; insights: boolean } {
   const m = html.match(/<title[^>]*>([^<]*)<\/title>/i);
   const title = m
     ? m[1]
@@ -83,7 +83,9 @@ export function inspectHtml(html: string): { title: string | null; bytes: number
   else if (title && MAINTENANCE_TITLE.test(title)) issue = "maintenance";
   else if (title && DEFAULT_TITLE.test(title)) issue = "default_title";
   else if (bytes < 200) issue = "empty_page";
-  return { title, bytes, issue };
+  // Akke Insights-tracker in de ruwe HTML (een consent-gated tracker zie je hier niet: zet dan checks.insights = false).
+  const insights = /insights\.studioakke\.com\/t\.js/.test(html);
+  return { title, bytes, issue, insights };
 }
 
 export async function checkHttp(url: string, fetcher: Fetcher = fetch): Promise<CheckOutcome> {
@@ -114,7 +116,7 @@ export async function checkHttp(url: string, fetcher: Fetcher = fetch): Promise<
       detail: {
         http_status: res.status,
         url,
-        ...(page ? { title: page.title, bytes: page.bytes, content_issue: page.issue } : {}),
+        ...(page ? { title: page.title, bytes: page.bytes, content_issue: page.issue, insights: page.insights } : {}),
       },
     };
   } catch (e) {
@@ -250,17 +252,21 @@ async function txtRecords(name: string, fetcher: Fetcher): Promise<string[]> {
 export async function checkDns(url: string, fetcher: Fetcher = fetch): Promise<CheckOutcome> {
   const host = hostOf(url).replace(/^www\./, "");
   try {
-    const [spfRecords, dmarcRecords] = await Promise.all([
+    const [spfRecords, dmarcRecords, mx] = await Promise.all([
       txtRecords(host, fetcher),
       txtRecords(`_dmarc.${host}`, fetcher),
+      mxRecords(host, fetcher).catch(() => null),
     ]);
     const spf = spfRecords.some((r) => r.toLowerCase().startsWith("v=spf1"));
     const dmarc = dmarcRecords.some((r) => r.toUpperCase().startsWith("V=DMARC1"));
+    // Zonder MX en zonder SPF is er geen mailverkeer op dit domein: geen incident, enkel een tip
+    // (v=spf1 -all + DMARC p=reject tegen spoofing). MX onbekend = streng blijven.
+    const mail = mx === null ? null : mx.length > 0 || spf;
     return {
       check_key: "dns",
-      status: spf && dmarc ? "ok" : "warn",
+      status: spf && dmarc ? "ok" : mail === false ? "ok" : "warn",
       latency_ms: null,
-      detail: { host, spf, dmarc },
+      detail: { host, spf, dmarc, mail, ...(mail === false && !(spf && dmarc) ? { tip: "Geen mail op dit domein: v=spf1 -all en DMARC p=reject blokkeren spoofing." } : {}) },
     };
   } catch (e) {
     return { check_key: "dns", status: "unknown", latency_ms: null, detail: { host, error: errMsg(e) } };

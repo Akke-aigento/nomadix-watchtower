@@ -20,7 +20,8 @@ const AGENT_NAME = "Watchtower Baken";
 type Variant = { id: "nl" | "nl_b" | "en"; name: string; lang: "nl" | "en"; asr: string };
 const VARIANTS: Record<Variant["id"], Variant> = {
   nl: { id: "nl", name: AGENT_NAME, lang: "nl", asr: "scribe_realtime" },
-  nl_b: { id: "nl_b", name: "Watchtower Baken B", lang: "nl", asr: "scribe_v2_turbo" },
+  // "scribe_v2_turbo" staat in geen enkele ElevenLabs-doc; gedocumenteerd is scribe_realtime.
+  nl_b: { id: "nl_b", name: "Watchtower Baken B", lang: "nl", asr: "scribe_realtime" },
   en: { id: "en", name: "Watchtower Baken EN", lang: "en", asr: "scribe_realtime" },
 };
 const LANG_LINE: Record<Variant["lang"], string> = {

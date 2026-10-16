@@ -19,7 +19,9 @@ async function viaEleven(key: string, audio: Blob) {
       ? "mp4"
       : "webm";
   form.append("file", audio, `baken.${ext}`);
-  form.append("model_id", process.env.BAKEN_STT_MODEL || "scribe_v1");
+  // scribe_v1 is sinds 09-07-2026 verwijderd bij ElevenLabs: een oude waarde in de secret mag niet meer winnen.
+  const sttModel = process.env.BAKEN_STT_MODEL;
+  form.append("model_id", sttModel && sttModel !== "scribe_v1" ? sttModel : "scribe_v2");
   form.append("language_code", "nld");
   form.append("tag_audio_events", "false");
   const res = await fetch("https://api.elevenlabs.io/v1/speech-to-text", {

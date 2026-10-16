@@ -150,7 +150,7 @@ export async function morningBrief(opts: { dryRun?: boolean; week?: boolean } = 
 
   const [{ data: targets }, { data: openInc }, { data: recentInc }, { data: proposals }, { data: ssl }, { count: unknownCount }] =
     await Promise.all([
-      supabaseAdmin.from("watch_targets").select("id, name, kind, status").eq("enabled", true).order("name"),
+      supabaseAdmin.from("watch_targets").select("id, name, kind, status, url, checks").eq("enabled", true).order("name"),
       supabaseAdmin.from("incidents").select("*").eq("status", "open").order("opened_at"),
       supabaseAdmin
         .from("incidents")
@@ -281,8 +281,10 @@ export async function morningBrief(opts: { dryRun?: boolean; week?: boolean } = 
   const { data: findingRows } = await supabaseAdmin
     .from("findings")
     .select("title, kind, impact, severity, status, bundle, detected_at, source_url")
-    .or(`detected_at.gte.${dayAgo},and(status.eq.nieuw,impact.neq.raakt_ons_niet)`)
-    .order("detected_at", { ascending: false });
+    .or(`detected_at.gte.${dayAgo},and(status.eq.nieuw,impact.eq.raakt_ons)`)
+    .order("detected_at", { ascending: false })
+    // Max 6: de mail is een seintje, het volledige overzicht staat op /koppelingen.
+    .limit(6);
   if ((findingRows ?? []).length) {
     const tag = (f: { impact: string; status: string; bundle: string | null }) =>
       f.status === "pakket" ? ["Pakket", C.rustig] : f.impact === "raakt_ons_niet" ? ["Geen impact", C.muted] : f.impact === "onzeker" ? ["Onzeker", C.aandacht] : ["Raakt ons", C.actieText];
@@ -302,16 +304,52 @@ export async function morningBrief(opts: { dryRun?: boolean; week?: boolean } = 
   }
 
   // Wacht op jouw go
+  // Max 3 (security eerst, dan de oudste): een lange lijst leest niemand. De rest staat op /voorstellen.
   if ((proposals ?? []).length) {
+    const rank = (c: string) => (c === "security" ? 0 : c === "bug" ? 1 : 2);
+    const all = [...(proposals ?? [])].sort((a, b) => rank(a.category) - rank(b.category) || a.created_at.localeCompare(b.created_at));
+    const top = all.slice(0, 3);
+    const rest = all.length - top.length;
     blocks.push(
       card(
         label("Wacht op jouw go") +
-          (proposals ?? [])
-            .map((p) => `<div style="font:400 15px/1.5 Arial,sans-serif;color:${C.body};margin-bottom:6px">${esc(p.title)} <span style="color:${C.muted}">· ${esc(since(p.created_at))}</span></div>`)
-            .join(""),
+          top
+            .map((p) => `<div style="font:400 15px/1.5 Arial,sans-serif;color:${C.body};margin-bottom:6px">${p.category === "security" ? `<strong style="font-weight:600;color:${C.actieText}">Security · </strong>` : ""}${esc(p.title)} <span style="color:${C.muted}">· ${esc(since(p.created_at))}</span></div>`)
+            .join("") +
+          (rest > 0
+            ? `<div style="font:400 13px/1.5 Arial,sans-serif;color:${C.muted};margin-top:8px"><a href="${DASHBOARD_URL}/proposals" style="color:${C.muted}">Nog ${rest} ${rest === 1 ? "voorstel" : "voorstellen"}</a></div>`
+            : ""),
       ),
     );
     sections.push("voorstellen");
+  }
+
+  // Meting met Akke Insights: checks.insights = true → tracker hoort in de ruwe HTML te staan;
+  // niet ingevuld + eigen domein → nog te beslissen. false = bewust niet (of consent-gated).
+  {
+    const latestHttp = new Map(
+      ((ssl ?? []) as Array<{ target_id: string; check_key: string; detail: unknown }>)
+        .filter((r) => r.check_key === "http")
+        .map((r) => [r.target_id, (r.detail ?? {}) as { insights?: boolean }]),
+    );
+    const expect = (t: { checks: unknown }) => ((t.checks ?? {}) as { insights?: boolean }).insights;
+    const ownDomain = (url: string | null) => !!url && !/\.lovable\.app/i.test(url);
+    const gone = list.filter((t) => expect(t) === true && latestHttp.get(t.id)?.insights === false);
+    const undecided = list.filter(
+      (t) => expect(t) === undefined && ownDomain(t.url) && ["storefront", "venture", "client_site"].includes(t.kind),
+    );
+    if (gone.length || undecided.length) {
+      blocks.push(
+        card(
+          label("Meting (Akke Insights)", gone.length ? C.actieText : C.aandacht) +
+            gone.map((t) => `<div style="font:400 15px/1.5 Arial,sans-serif;color:${C.body};margin-bottom:6px"><strong style="font-weight:600">Tracker weg</strong> · ${esc(t.name)}</div>`).join("") +
+            (undecided.length
+              ? `<div style="font:400 15px/1.5 Arial,sans-serif;color:${C.body};margin-bottom:6px">Nog niet gemeten: ${esc(undecided.map((t) => t.name).join(", "))}</div>`
+              : ""),
+        ),
+      );
+      sections.push("insights");
+    }
   }
 
   // Rustig
