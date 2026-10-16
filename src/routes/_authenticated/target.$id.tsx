@@ -178,8 +178,8 @@ function TargetDetailPage() {
       <AppShell>
         <div className="space-y-3">
           <p className="text-sm text-muted-foreground">Target niet gevonden.</p>
-          <Link to="/dashboard" className="text-sm text-primary hover:underline">
-            Terug naar overzicht
+          <Link to="/sites" className="text-sm text-primary hover:underline">
+            Terug naar sites
           </Link>
         </div>
       </AppShell>
@@ -226,10 +226,10 @@ function TargetDetailPage() {
       <div className="mx-auto max-w-4xl space-y-8">
         <header className="space-y-3 pt-1">
           <Link
-            to="/dashboard"
+            to="/sites"
             className="inline-flex min-h-11 items-center text-sm text-muted-foreground hover:text-foreground"
           >
-            ‹ Overzicht
+            ‹ Sites
           </Link>
           <div className="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">
             {KIND_LABEL[target.kind] ?? target.kind}

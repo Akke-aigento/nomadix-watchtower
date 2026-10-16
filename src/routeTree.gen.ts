@@ -19,6 +19,7 @@ import { Route as AuthenticatedKoppelingenRouteImport } from './routes/_authenti
 import { Route as AuthenticatedKostenRouteImport } from './routes/_authenticated/kosten'
 import { Route as AuthenticatedMeldingenRouteImport } from './routes/_authenticated/meldingen'
 import { Route as AuthenticatedProposalsRouteImport } from './routes/_authenticated/proposals'
+import { Route as AuthenticatedSitesRouteImport } from './routes/_authenticated/sites'
 import { Route as AuthenticatedToegangRouteImport } from './routes/_authenticated/toegang'
 import { Route as ApiBakenRouteImport } from './routes/api/baken'
 import { Route as ApiBakenAgentRouteImport } from './routes/api/baken-agent'
@@ -86,6 +87,11 @@ const AuthenticatedMeldingenRoute = AuthenticatedMeldingenRouteImport.update({
 const AuthenticatedProposalsRoute = AuthenticatedProposalsRouteImport.update({
   id: '/proposals',
   path: '/proposals',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedSitesRoute = AuthenticatedSitesRouteImport.update({
+  id: '/sites',
+  path: '/sites',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedToegangRoute = AuthenticatedToegangRouteImport.update({
@@ -189,6 +195,7 @@ export interface FileRoutesByFullPath {
   '/kosten': typeof AuthenticatedKostenRoute
   '/meldingen': typeof AuthenticatedMeldingenRoute
   '/proposals': typeof AuthenticatedProposalsRoute
+  '/sites': typeof AuthenticatedSitesRoute
   '/toegang': typeof AuthenticatedToegangRoute
   '/api/baken': typeof ApiBakenRoute
   '/api/baken-agent': typeof ApiBakenAgentRoute
@@ -218,6 +225,7 @@ export interface FileRoutesByTo {
   '/kosten': typeof AuthenticatedKostenRoute
   '/meldingen': typeof AuthenticatedMeldingenRoute
   '/proposals': typeof AuthenticatedProposalsRoute
+  '/sites': typeof AuthenticatedSitesRoute
   '/toegang': typeof AuthenticatedToegangRoute
   '/api/baken': typeof ApiBakenRoute
   '/api/baken-agent': typeof ApiBakenAgentRoute
@@ -249,6 +257,7 @@ export interface FileRoutesById {
   '/_authenticated/kosten': typeof AuthenticatedKostenRoute
   '/_authenticated/meldingen': typeof AuthenticatedMeldingenRoute
   '/_authenticated/proposals': typeof AuthenticatedProposalsRoute
+  '/_authenticated/sites': typeof AuthenticatedSitesRoute
   '/_authenticated/toegang': typeof AuthenticatedToegangRoute
   '/api/baken': typeof ApiBakenRoute
   '/api/baken-agent': typeof ApiBakenAgentRoute
@@ -280,6 +289,7 @@ export interface FileRouteTypes {
     | '/kosten'
     | '/meldingen'
     | '/proposals'
+    | '/sites'
     | '/toegang'
     | '/api/baken'
     | '/api/baken-agent'
@@ -309,6 +319,7 @@ export interface FileRouteTypes {
     | '/kosten'
     | '/meldingen'
     | '/proposals'
+    | '/sites'
     | '/toegang'
     | '/api/baken'
     | '/api/baken-agent'
@@ -339,6 +350,7 @@ export interface FileRouteTypes {
     | '/_authenticated/kosten'
     | '/_authenticated/meldingen'
     | '/_authenticated/proposals'
+    | '/_authenticated/sites'
     | '/_authenticated/toegang'
     | '/api/baken'
     | '/api/baken-agent'
@@ -450,6 +462,13 @@ declare module '@tanstack/react-router' {
       path: '/proposals'
       fullPath: '/proposals'
       preLoaderRoute: typeof AuthenticatedProposalsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/sites': {
+      id: '/_authenticated/sites'
+      path: '/sites'
+      fullPath: '/sites'
+      preLoaderRoute: typeof AuthenticatedSitesRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/toegang': {
@@ -589,6 +608,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedKostenRoute: typeof AuthenticatedKostenRoute
   AuthenticatedMeldingenRoute: typeof AuthenticatedMeldingenRoute
   AuthenticatedProposalsRoute: typeof AuthenticatedProposalsRoute
+  AuthenticatedSitesRoute: typeof AuthenticatedSitesRoute
   AuthenticatedToegangRoute: typeof AuthenticatedToegangRoute
   AuthenticatedTargetIdRoute: typeof AuthenticatedTargetIdRoute
   AuthenticatedTargetsNewRoute: typeof AuthenticatedTargetsNewRoute
@@ -602,6 +622,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedKostenRoute: AuthenticatedKostenRoute,
   AuthenticatedMeldingenRoute: AuthenticatedMeldingenRoute,
   AuthenticatedProposalsRoute: AuthenticatedProposalsRoute,
+  AuthenticatedSitesRoute: AuthenticatedSitesRoute,
   AuthenticatedToegangRoute: AuthenticatedToegangRoute,
   AuthenticatedTargetIdRoute: AuthenticatedTargetIdRoute,
   AuthenticatedTargetsNewRoute: AuthenticatedTargetsNewRoute,

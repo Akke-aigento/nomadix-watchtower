@@ -6,6 +6,7 @@ import {
   CalendarClock,
   Coins,
   Globe,
+  LayoutGrid,
   Lightbulb,
   LogOut,
   MoreHorizontal,
@@ -25,13 +26,14 @@ type NavItem = { to: string; label: string; icon: LucideIcon; badge?: "proposals
 /** Hoofdtabs: op de telefoon onderaan, op desktop bovenaan in de zijbalk. */
 const MAIN: NavItem[] = [
   { to: "/dashboard", label: "Vandaag", icon: Sun },
+  { to: "/sites", label: "Sites", icon: LayoutGrid },
+];
+
+/** De rest: achter "Meer". Nuttig, maar niet dagelijks. */
+const MORE: NavItem[] = [
   { to: "/proposals", label: "Voorstellen", icon: Lightbulb, badge: "proposals" },
   { to: "/kosten", label: "Credits", icon: Coins },
   { to: "/koppelingen", label: "Koppelingen", icon: Plug },
-];
-
-/** De rest: op de telefoon achter "Meer". */
-const MORE: NavItem[] = [
   { to: "/agenda", label: "Agenda", icon: CalendarClock },
   { to: "/meldingen", label: "Meldingen", icon: Bell },
   { to: "/alerts", label: "Geschiedenis", icon: Siren },
@@ -117,7 +119,9 @@ export function AppShell({ children }: { children: ReactNode }) {
   }
 
   const isActive = (to: string) =>
-    pathname === to || (to !== "/dashboard" && pathname.startsWith(to));
+    pathname === to ||
+    (to !== "/dashboard" && pathname.startsWith(to)) ||
+    (to === "/sites" && pathname.startsWith("/target/"));
 
   const sideLink = (item: NavItem) => (
     <Link
@@ -176,7 +180,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 
         {/* Zwevende tabbalk (telefoon) */}
         <nav
-          className="glass-bar fixed inset-x-3 z-40 grid grid-cols-5 rounded-[26px] p-1.5 md:hidden"
+          className="glass-bar fixed inset-x-3 z-40 grid grid-cols-3 rounded-[26px] p-1.5 md:hidden"
           style={{ bottom: "calc(env(safe-area-inset-bottom) + 10px)" }}
           aria-label="Hoofdmenu"
         >
@@ -225,7 +229,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           >
             <MoreHorizontal className="size-[20px]" />
             Meer
-            {badges.access > 0 && (
+            {badges.access + badges.proposals > 0 && (
               <span className="absolute top-2 right-[26%] size-2 rounded-full bg-primary" />
             )}
           </button>

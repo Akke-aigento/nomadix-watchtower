@@ -9,12 +9,9 @@ import { IncidentList, isAcknowledged, useIncidents } from "@/components/inciden
 import { CategoryBadge, formatDateTime, relativeTime } from "@/components/watchtower";
 import { cn } from "@/lib/utils";
 import { FINDING_KIND, engineLine, useEngineHealth } from "@/components/findings";
-import { IncidentsWeekly, LatencyGrid } from "@/components/charts";
 import { ProposalRow, ProposalSheet } from "@/components/proposal-detail";
 import { RadarOrb } from "@/components/radar-orb";
 import { useBaken } from "@/components/baken/baken";
-import { VisitorsOverview } from "@/components/site-analytics";
-import { Coins } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
   head: () => ({
@@ -217,6 +214,13 @@ function DashboardPage() {
 
   const loading = targetsQuery.isLoading || incidentsQuery.isLoading;
   const proposals = proposalsQuery.data ?? [];
+  const rank = (c: string) => (c === "security" ? 0 : c === "bug" ? 1 : 2);
+  const topProposals = [...proposals]
+    .sort((a, b) => rank(a.category) - rank(b.category) || a.created_at.localeCompare(b.created_at))
+    .slice(0, 3);
+  // "Weet dit" toont enkel vondsten die ons raken; de onzekere staan op Koppelingen.
+  const knowFindings = (findingsQuery.data ?? []).filter((f) => f.impact === "raakt_ons").slice(0, 5);
+  const calmNames = targets.filter((t) => !troubled.has(t.id)).map((t) => t.name);
 
   return (
     <AppShell>
@@ -275,8 +279,17 @@ function DashboardPage() {
           </div>
         </header>
 
-        {actie.length > 0 && (
-          <section className="space-y-3" aria-label="Actie">
+        {/* Doe dit: wat vandaag van jou iets vraagt. Acties eerst, dan max 3 voorstellen (security, dan oudste). */}
+        {(actie.length > 0 || topProposals.length > 0) && (
+          <section className="space-y-3" aria-label="Doe dit">
+            <div className="flex items-baseline justify-between">
+              <h2 className="text-xs font-semibold uppercase tracking-[0.1em] text-muted-foreground">Doe dit</h2>
+              {proposals.length > topProposals.length && (
+                <Link to="/proposals" className="text-xs font-medium text-primary">
+                  Nog {proposals.length - topProposals.length} voorstellen
+                </Link>
+              )}
+            </div>
             {actie.map((i) => (
               <Link
                 key={i.id}
@@ -286,70 +299,50 @@ function DashboardPage() {
               >
                 <div className="mb-1 flex items-center justify-between gap-3">
                   <span className="font-semibold">{i.watch_targets?.name}</span>
-                  <span className="text-tech text-xs text-[var(--crit)]">
-                    sinds {formatDateTime(i.opened_at)}
-                  </span>
+                  <span className="text-tech text-xs text-[var(--crit)]">sinds {formatDateTime(i.opened_at)}</span>
                 </div>
                 <p className="text-[15px]">{i.title}</p>
                 {i.summary && <p className="mt-1 text-sm text-muted-foreground">{i.summary}</p>}
               </Link>
             ))}
+            {topProposals.length > 0 && (
+              <div className="grid gap-2">
+                {topProposals.map((p) => (
+                  <ProposalRow key={p.id} p={{ ...p, bundle_order: null }} onOpen={setOpenProposal} />
+                ))}
+              </div>
+            )}
           </section>
         )}
 
-        {aandacht.length > 0 && (
-          <section className="space-y-3" aria-label="Aandacht">
-            {[...new Set(aandacht.map((i) => i.target_id))].map((targetId) => {
-              const items = aandacht.filter((i) => i.target_id === targetId);
-              return (
-                <Link
-                  key={targetId}
-                  to="/target/$id"
-                  params={{ id: targetId }}
-                  className="block rounded-2xl border border-[var(--warn)]/30 bg-[var(--warn)]/6 p-5 transition-colors hover:bg-[var(--warn)]/10"
-                >
-                  <div className="mb-1 flex items-center justify-between gap-3">
-                    <span className="font-semibold">{items[0].watch_targets?.name}</span>
-                    <span className="text-xs font-semibold text-[var(--warn)]">Aandacht</span>
-                  </div>
-                  {items.map((i) => (
-                    <p key={i.id} className="text-sm text-muted-foreground">
-                      <span className="text-foreground">{i.title}</span>
-                      {i.summary ? ` — ${i.summary}` : ""}
-                    </p>
-                  ))}
-                </Link>
-              );
-            })}
-          </section>
-        )}
-
-        {(findingsQuery.data ?? []).length > 0 && (
-          <section className="space-y-3">
-            <h2 className="text-tech text-xs text-muted-foreground">
-              Gevonden bij partners — wordt uitgewerkt tot pakket
-            </h2>
+        {/* Weet dit: kan wachten, maar goed om te weten. */}
+        {(aandacht.length > 0 || knowFindings.length > 0) && (
+          <section className="space-y-3" aria-label="Weet dit">
+            <h2 className="text-xs font-semibold uppercase tracking-[0.1em] text-muted-foreground">Weet dit</h2>
             <div className="panel divide-y divide-border">
-              {(findingsQuery.data ?? []).map((f) => (
-                <Link
-                  key={f.id}
-                  to="/koppelingen"
-                  className="flex items-center gap-3 px-4 py-3 text-sm hover:bg-secondary/40"
-                >
-                  <span
-                    className="inline-block size-2 shrink-0 rounded-full"
-                    style={{
-                      background:
-                        f.severity === "actie"
-                          ? "var(--crit)"
-                          : f.severity === "aandacht"
-                            ? "var(--warn)"
-                            : "var(--muted-foreground)",
-                    }}
-                  />
-                  <span className="min-w-0 flex-1 truncate">{f.title}</span>
-                  <span className="text-tech shrink-0 text-[10px] text-muted-foreground">
-                    {FINDING_KIND[f.kind] ?? f.kind}
+              {[...new Set(aandacht.map((i) => i.target_id))].map((targetId) => {
+                const items = aandacht.filter((i) => i.target_id === targetId);
+                return (
+                  <Link
+                    key={targetId}
+                    to="/target/$id"
+                    params={{ id: targetId }}
+                    className="flex items-start gap-3 px-4 py-3 text-sm hover:bg-secondary/40"
+                  >
+                    <span className="mt-1.5 inline-block size-2 shrink-0 rounded-full" style={{ background: "var(--warn)" }} />
+                    <span className="min-w-0 flex-1">
+                      <span className="font-medium">{items[0].watch_targets?.name}</span>
+                      <span className="text-muted-foreground"> · {items.map((i) => i.title).join(" · ")}</span>
+                    </span>
+                  </Link>
+                );
+              })}
+              {knowFindings.map((f) => (
+                <Link key={f.id} to="/koppelingen" className="flex items-start gap-3 px-4 py-3 text-sm hover:bg-secondary/40">
+                  <span className="mt-1.5 inline-block size-2 shrink-0 rounded-full" style={{ background: "var(--muted-foreground)" }} />
+                  <span className="min-w-0 flex-1">
+                    <span className="font-medium">{FINDING_KIND[f.kind] ?? f.kind}</span>
+                    <span className="text-muted-foreground"> · {f.title}</span>
                   </span>
                 </Link>
               ))}
@@ -357,112 +350,17 @@ function DashboardPage() {
           </section>
         )}
 
-        {proposals.length > 0 && (
-          <section className="space-y-3">
-            <div className="flex items-baseline justify-between">
-              <h2 className="text-xs font-semibold uppercase tracking-[0.1em] text-muted-foreground">
-                Wacht op jouw go
-              </h2>
-              <Link to="/proposals" className="text-xs font-medium text-primary">
-                Alle voorstellen
-              </Link>
-            </div>
-            <div className="grid gap-2 md:grid-cols-2">
-              {proposals.slice(0, 6).map((p) => (
-                <ProposalRow key={p.id} p={{ ...p, bundle_order: null }} onOpen={setOpenProposal} />
-              ))}
-            </div>
-            {proposals.length > 6 && (
-              <Link
-                to="/proposals"
-                className="block text-sm text-muted-foreground hover:text-foreground"
-              >
-                + {proposals.length - 6} meer
-              </Link>
-            )}
-          </section>
-        )}
-
-        {creditsQuery.data?.top && (
-          <Link
-            to="/kosten"
-            className="panel flex items-center gap-4 p-5 transition-colors hover:border-primary/40"
-          >
-            <span className="brand-gradient flex size-11 shrink-0 items-center justify-center rounded-2xl">
-              <Coins className="size-5 text-[#06202c]" />
-            </span>
+        {/* Alles goed: één regel, de rest staat op Sites. */}
+        {!loading && (
+          <Link to="/sites" className="panel flex items-center gap-3 p-4 text-sm transition-colors hover:border-primary/40">
+            <span className="inline-block size-2.5 shrink-0 rounded-full" style={{ background: "var(--ok)" }} />
             <span className="min-w-0 flex-1">
-              <span className="block font-semibold">
-                {creditsQuery.data.open
-                  ? `${creditsQuery.data.open} manieren om credits te besparen`
-                  : "Credits onder controle"}
-              </span>
-              <span className="block truncate text-sm text-muted-foreground">
-                {creditsQuery.data.top.project_name} neemt{" "}
-                {Math.round(
-                  (Number(creditsQuery.data.top.exec_s_per_day) / (creditsQuery.data.total || 1)) *
-                    100,
-                )}
-                % van de rekentijd
-              </span>
+              <span className="font-semibold">{calmNames.length} sites zijn rustig</span>
+              <span className="block truncate text-muted-foreground">{calmNames.join(", ")}</span>
             </span>
+            <span className="shrink-0 text-xs font-medium text-primary">Alle sites</span>
           </Link>
         )}
-
-        <LatencyGrid
-          targets={targets.filter((t) => t.kind === "platform" || t.kind === "storefront")}
-        />
-
-        <VisitorsOverview targets={targets} />
-
-        <IncidentsWeekly />
-
-        <section className="space-y-6">
-          {GROUPS.map((g) => {
-            const list = targets.filter((t) => g.kinds.includes(t.kind));
-            if (!list.length) return null;
-            const calm = list.filter((t) => levelOf(t.id) === "rustig").length;
-            const parts = [
-              `${calm} rustig`,
-              ...(["actie", "aandacht", "erkend"] as const)
-                .map((lv) => [lv, list.filter((t) => levelOf(t.id) === lv).length] as const)
-                .filter(([, n]) => n > 0)
-                .map(([lv, n]) => `${n} ${lv}`),
-            ];
-            return (
-              <div key={g.name}>
-                <div className="mb-2.5 flex items-baseline justify-between">
-                  <h2 className="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">
-                    {g.name}
-                  </h2>
-                  <span className="text-xs text-muted-foreground">{parts.join(" · ")}</span>
-                </div>
-                <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
-                  {list.map((t) => {
-                    const lv = levelOf(t.id);
-                    return (
-                      <Link
-                        key={t.id}
-                        to="/target/$id"
-                        params={{ id: t.id }}
-                        className={cn(
-                          "flex min-h-11 items-center gap-2.5 rounded-xl border border-transparent bg-card px-3 py-2.5 transition-colors hover:border-border",
-                        )}
-                      >
-                        <span
-                          className="inline-block size-2 shrink-0 rounded-full"
-                          style={{ background: LEVEL_COLOR[lv] }}
-                          aria-label={lv}
-                        />
-                        <span className="truncate text-sm font-medium">{t.name}</span>
-                      </Link>
-                    );
-                  })}
-                </div>
-              </div>
-            );
-          })}
-        </section>
 
         <footer className="space-y-2 border-t border-border pt-4 text-sm text-muted-foreground">
           {acked.map((i) => (
