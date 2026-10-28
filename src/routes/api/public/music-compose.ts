@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 
 /**
  * Muziek voor de reels van de Nomadix-merken (nomadix-socials/shared/MUZIEK.md).
- * Maakt één instrumentaal nummer met ElevenLabs Music (dezelfde sleutel als Baken) en
+ * Maakt één instrumentaal nummer met ElevenLabs Music (sleutel ELEVENLABS_MUSIC_API_KEY, anders die van Baken) en
  * zet het in de publieke bucket "social-music". De sleutel verlaat de server nooit.
  *
  * Beveiligd met x-cron-secret; bedoeld om vanuit SQL (net.http_post) aan te roepen.
@@ -36,7 +36,7 @@ export const Route = createFileRoute("/api/public/music-compose")({
         const model = MODELS.has(input.model ?? "") ? input.model! : "music_v2_5";
 
         const { elevenKey } = await import("@/lib/baken-auth.server");
-        const key = elevenKey();
+        const key = process.env.ELEVENLABS_MUSIC_API_KEY || elevenKey();
         if (!key) return Response.json({ error: "geen ElevenLabs-sleutel in Watchtower" }, { status: 500 });
 
         const res = await fetch("https://api.elevenlabs.io/v1/music?output_format=mp3_44100_192", {
