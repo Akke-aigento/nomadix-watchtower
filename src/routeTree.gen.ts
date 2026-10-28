@@ -34,6 +34,7 @@ import { Route as ApiPublicCheckRouteImport } from './routes/api/public/check'
 import { Route as ApiPublicDailyRollupRouteImport } from './routes/api/public/daily-rollup'
 import { Route as ApiPublicIngestScanRouteImport } from './routes/api/public/ingest-scan'
 import { Route as ApiPublicMorningBriefRouteImport } from './routes/api/public/morning-brief'
+import { Route as ApiPublicMusicComposeRouteImport } from './routes/api/public/music-compose'
 import { Route as ApiPublicNotifyRouteImport } from './routes/api/public/notify'
 import { Route as ApiPublicRunScansRouteImport } from './routes/api/public/run-scans'
 import { Route as ApiPublicSelftestRouteImport } from './routes/api/public/selftest'
@@ -164,6 +165,11 @@ const ApiPublicMorningBriefRoute = ApiPublicMorningBriefRouteImport.update({
   path: '/api/public/morning-brief',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicMusicComposeRoute = ApiPublicMusicComposeRouteImport.update({
+  id: '/api/public/music-compose',
+  path: '/api/public/music-compose',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicNotifyRoute = ApiPublicNotifyRouteImport.update({
   id: '/api/public/notify',
   path: '/api/public/notify',
@@ -210,6 +216,7 @@ export interface FileRoutesByFullPath {
   '/api/public/daily-rollup': typeof ApiPublicDailyRollupRoute
   '/api/public/ingest-scan': typeof ApiPublicIngestScanRoute
   '/api/public/morning-brief': typeof ApiPublicMorningBriefRoute
+  '/api/public/music-compose': typeof ApiPublicMusicComposeRoute
   '/api/public/notify': typeof ApiPublicNotifyRoute
   '/api/public/run-scans': typeof ApiPublicRunScansRoute
   '/api/public/selftest': typeof ApiPublicSelftestRoute
@@ -240,6 +247,7 @@ export interface FileRoutesByTo {
   '/api/public/daily-rollup': typeof ApiPublicDailyRollupRoute
   '/api/public/ingest-scan': typeof ApiPublicIngestScanRoute
   '/api/public/morning-brief': typeof ApiPublicMorningBriefRoute
+  '/api/public/music-compose': typeof ApiPublicMusicComposeRoute
   '/api/public/notify': typeof ApiPublicNotifyRoute
   '/api/public/run-scans': typeof ApiPublicRunScansRoute
   '/api/public/selftest': typeof ApiPublicSelftestRoute
@@ -272,6 +280,7 @@ export interface FileRoutesById {
   '/api/public/daily-rollup': typeof ApiPublicDailyRollupRoute
   '/api/public/ingest-scan': typeof ApiPublicIngestScanRoute
   '/api/public/morning-brief': typeof ApiPublicMorningBriefRoute
+  '/api/public/music-compose': typeof ApiPublicMusicComposeRoute
   '/api/public/notify': typeof ApiPublicNotifyRoute
   '/api/public/run-scans': typeof ApiPublicRunScansRoute
   '/api/public/selftest': typeof ApiPublicSelftestRoute
@@ -304,6 +313,7 @@ export interface FileRouteTypes {
     | '/api/public/daily-rollup'
     | '/api/public/ingest-scan'
     | '/api/public/morning-brief'
+    | '/api/public/music-compose'
     | '/api/public/notify'
     | '/api/public/run-scans'
     | '/api/public/selftest'
@@ -334,6 +344,7 @@ export interface FileRouteTypes {
     | '/api/public/daily-rollup'
     | '/api/public/ingest-scan'
     | '/api/public/morning-brief'
+    | '/api/public/music-compose'
     | '/api/public/notify'
     | '/api/public/run-scans'
     | '/api/public/selftest'
@@ -365,6 +376,7 @@ export interface FileRouteTypes {
     | '/api/public/daily-rollup'
     | '/api/public/ingest-scan'
     | '/api/public/morning-brief'
+    | '/api/public/music-compose'
     | '/api/public/notify'
     | '/api/public/run-scans'
     | '/api/public/selftest'
@@ -386,6 +398,7 @@ export interface RootRouteChildren {
   ApiPublicDailyRollupRoute: typeof ApiPublicDailyRollupRoute
   ApiPublicIngestScanRoute: typeof ApiPublicIngestScanRoute
   ApiPublicMorningBriefRoute: typeof ApiPublicMorningBriefRoute
+  ApiPublicMusicComposeRoute: typeof ApiPublicMusicComposeRoute
   ApiPublicNotifyRoute: typeof ApiPublicNotifyRoute
   ApiPublicRunScansRoute: typeof ApiPublicRunScansRoute
   ApiPublicSelftestRoute: typeof ApiPublicSelftestRoute
@@ -569,6 +582,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicMorningBriefRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/music-compose': {
+      id: '/api/public/music-compose'
+      path: '/api/public/music-compose'
+      fullPath: '/api/public/music-compose'
+      preLoaderRoute: typeof ApiPublicMusicComposeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/notify': {
       id: '/api/public/notify'
       path: '/api/public/notify'
@@ -646,6 +666,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicDailyRollupRoute: ApiPublicDailyRollupRoute,
   ApiPublicIngestScanRoute: ApiPublicIngestScanRoute,
   ApiPublicMorningBriefRoute: ApiPublicMorningBriefRoute,
+  ApiPublicMusicComposeRoute: ApiPublicMusicComposeRoute,
   ApiPublicNotifyRoute: ApiPublicNotifyRoute,
   ApiPublicRunScansRoute: ApiPublicRunScansRoute,
   ApiPublicSelftestRoute: ApiPublicSelftestRoute,
